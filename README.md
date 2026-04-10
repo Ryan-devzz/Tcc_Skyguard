@@ -1,220 +1,138 @@
 # SkyGuard — Deploy Docker na Azure VM
 
-## Estrutura do projeto
+Sistema de monitoramento de qualidade do ar com ESP32 + SGP30 + MQTT.
 
-```
-skyguard-docker/
-├── app/                    ← Código fonte da aplicação
-│   ├── api/
-│   │   ├── config.php      ← Lê variáveis de ambiente
-│   │   ├── db.php
-│   │   ├── auth.php
-│   │   ├── readings.php
-│   │   ├── devices.php
-│   │   ├── users.php
-│   │   └── contact.php
-│   ├── pages/
-│   ├── css/
-│   ├── js/
-│   ├── vendor/             ← PHPMailer (já incluso)
-│   ├── login.html
-│   └── skyguard_db.sql
-├── docker/
-│   └── apache.conf         ← Config do Apache
-├── docker-compose.yml
-├── Dockerfile
-├── .env                    ← Suas credenciais (NÃO suba pro Git)
-└── .gitignore
-```
+## Instalacao do zero (VM Azure)
+
+### Pre-requisitos
+- VM Azure com Ubuntu 22.04
+- Portas abertas no NSG: 22, 80, 443, 8080
+
+### 3 comandos e pronto
+
+    git clone https://github.com/Ryan-devzz/Tcc_skyguard.git ~/Tcc_Skyguard
+    cd ~/Tcc_Skyguard
+    bash setup.sh
+
+O script setup.sh faz automaticamente:
+1. Limpeza de espaco em disco
+2. Instalacao do Docker e Docker Compose
+3. Geracao do certificado SSL para o IP da VM
+4. Configuracao do Apache com HTTPS
+5. Build da imagem PHP com PHPMailer
+6. Subida dos containers (app + banco + phpMyAdmin)
+7. Verificacao se o site esta respondendo
 
 ---
 
-## Pré-requisitos na VM Azure
+## Acessar o sistema
 
-```bash
-# Instala Docker Engine
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER
-newgrp docker
+| Servico       | URL                              |
+|---------------|----------------------------------|
+| Aplicacao     | https://<IP_DA_VM>/login.html    |
+| phpMyAdmin    | http://<IP_DA_VM>:8080           |
 
-# Instala Docker Compose plugin
-sudo apt-get install -y docker-compose-plugin
+Ao abrir no navegador pela primeira vez, clique em Avancado -> Continuar para o site (certificado autoassinado).
 
-# Verifica
-docker --version
-docker compose version
-```
+Logins padrao:
+- Admin : admin@skyguard.com / admin123
+- Usuario: user@skyguard.com  / user123
 
 ---
 
-## 1. Subir o projeto na VM
+## Portas no Azure NSG
 
-### Opção A — Via SCP (upload direto)
-```bash
-# No seu computador local, envie o zip para a VM:
-scp skyguard-docker.zip azureuser@<IP_DA_VM>:~/
-
-# Na VM, descompacte:
-ssh azureuser@<IP_DA_VM>
-unzip skyguard-docker.zip
-cd skyguard-docker
-```
-
-### Opção B — Via Git
-```bash
-git clone <seu-repositorio> skyguard-docker
-cd skyguard-docker
-```
+| Porta | Descricao                        |
+|-------|----------------------------------|
+| 22    | SSH                              |
+| 80    | HTTP (redireciona para HTTPS)    |
+| 443   | HTTPS (site principal)           |
+| 8080  | phpMyAdmin                       |
 
 ---
 
-## 2. Configurar o arquivo .env
+## Problema com Apache2 nativo da VM
 
-```bash
-# Edite com os dados reais de produção
-nano .env
-```
+Se a porta 80 ou 8080 estiver ocupada:
 
-Campos obrigatórios:
-| Variável | Descrição |
-|---|---|
-| `DB_ROOT_PASSWORD` | Senha root do MySQL |
-| `DB_USER` | Usuário do banco |
-| `DB_PASS` | Senha do usuário do banco |
-| `MAIL_USERNAME` | Email Gmail remetente |
-| `MAIL_PASSWORD` | App Password do Gmail (16 chars) |
-| `MAIL_RECIPIENT` | Email que recebe as mensagens |
-| `ESP_TOKEN` | Token secreto do ESP32 |
-
-> **Gmail App Password:** Acesse myaccount.google.com → Segurança → Verificação em duas etapas → Senhas de app
+    sudo systemctl stop apache2
+    sudo systemctl disable apache2
+    docker compose down
+    docker compose up -d
 
 ---
 
-## 3. Liberar portas no Azure (Network Security Group)
+## Resetar senhas do banco
 
-No portal Azure, vá em:
-**VM → Rede → Adicionar regra de entrada**
+    HASH=$(docker exec skyguard_app php -r "echo password_hash('admin123', PASSWORD_DEFAULT);")
+    docker exec skyguard_db mysql -u root -p'SkyGuard@Root2025!' skyguard_db -e "UPDATE users SET password_hash = '$HASH' WHERE email = 'admin@skyguard.com';"
 
-| Porta | Protocolo | Descrição |
-|---|---|---|
-| 80 | TCP | Aplicação web |
-| 8080 | TCP | phpMyAdmin (opcional) |
-| 22 | TCP | SSH (já deve estar aberto) |
+    HASH=$(docker exec skyguard_app php -r "echo password_hash('user123', PASSWORD_DEFAULT);")
+    docker exec skyguard_db mysql -u root -p'SkyGuard@Root2025!' skyguard_db -e "UPDATE users SET password_hash = '$HASH' WHERE email = 'user@skyguard.com';"
 
 ---
 
-## 4. Subir os containers
+## Comandos uteis
 
-```bash
-cd skyguard-docker
-
-# Sobe tudo em background
-docker compose up -d
-
-# Acompanha os logs (aguarde o banco inicializar ~30s)
-docker compose logs -f
-
-# Verifica se todos estão rodando
-docker compose ps
-```
-
-Saída esperada:
-```
-NAME                  STATUS          PORTS
-skyguard_app          Up              0.0.0.0:80->80/tcp
-skyguard_db           Up (healthy)    3306/tcp
-skyguard_phpmyadmin   Up              0.0.0.0:8080->80/tcp
-```
+    docker compose ps                   # status dos containers
+    docker compose logs -f              # logs em tempo real
+    docker compose logs app --tail=30   # logs da aplicacao
+    docker compose restart app          # reiniciar aplicacao
+    docker compose down                 # parar tudo
+    docker compose down -v              # parar e apagar banco (CUIDADO)
+    docker exec -it skyguard_app bash   # terminal do container PHP
 
 ---
 
-## 5. Acessar o sistema
+## Atualizar codigo apos git pull
 
-| Serviço | URL |
-|---|---|
-| Aplicação | `http://<IP_DA_VM>/login.html` |
-| phpMyAdmin | `http://<IP_DA_VM>:8080` |
-
-**Login padrão:**
-- Admin: `admin@skyguard.com` / `admin123`
-- Usuário: `user@skyguard.com` / `user123`
-
-> ⚠️ **Troque as senhas após o primeiro acesso!**
+    cd ~/Tcc_Skyguard
+    git pull
+    docker compose down
+    docker compose build --no-cache
+    docker compose up -d
 
 ---
 
-## Comandos úteis
+## Backup do banco
 
-```bash
-# Ver logs da aplicação PHP
-docker compose logs app
+    # Exportar
+    docker exec skyguard_db mysqldump -u skyuser -p'SkyGuard@2025!' skyguard_db > backup_$(date +%Y%m%d).sql
 
-# Ver logs do banco
-docker compose logs db
-
-# Reiniciar apenas a aplicação
-docker compose restart app
-
-# Parar tudo
-docker compose down
-
-# Parar e apagar os dados do banco (CUIDADO!)
-docker compose down -v
-
-# Acessar o terminal do container PHP
-docker exec -it skyguard_app bash
-
-# Acessar o MySQL direto
-docker exec -it skyguard_db mysql -u skyuser -p skyguard_db
-```
+    # Importar
+    docker exec -i skyguard_db mysql -u skyuser -p'SkyGuard@2025!' skyguard_db < backup.sql
 
 ---
 
-## Atualizar a aplicação
+## Solucao de problemas
 
-```bash
-# Após alterar arquivos no código:
-docker compose build app
-docker compose up -d app
-```
+Banco nao conecta:
+    docker compose logs db
+    # Aguarde ate 2 minutos na primeira inicializacao
+
+PHPMailer nao envia email:
+- Use App Password do Google (16 caracteres), nao a senha normal
+- Ative verificacao em duas etapas em myaccount.google.com
+
+Site retorna 403:
+    docker exec skyguard_app ls /var/www/html/
+
+Porta ocupada:
+    sudo fuser -k 80/tcp
+    sudo fuser -k 443/tcp
+    sudo fuser -k 8080/tcp
+    docker compose up -d
 
 ---
 
-## Backup do banco de dados
+## ESP32 — Endpoint para envio de leituras
 
-```bash
-# Exportar
-docker exec skyguard_db mysqldump -u skyuser -p'SUA_SENHA' skyguard_db > backup_$(date +%Y%m%d).sql
+    POST https://<IP_DA_VM>/api/readings.php
+    Content-Type: application/json
 
-# Importar
-docker exec -i skyguard_db mysql -u skyuser -p'SUA_SENHA' skyguard_db < backup.sql
-```
-
----
-
-## Solução de problemas
-
-### Container `app` não sobe
-```bash
-docker compose logs app
-# Verifique se o Dockerfile está na raiz e o Apache está configurado
-```
-
-### Erro de conexão com banco
-```bash
-docker compose logs db
-# Aguarde o healthcheck ficar "healthy" antes de testar
-# Leva ~30 segundos na primeira vez (inicialização do MySQL)
-```
-
-### PHPMailer não envia e-mail
-- Verifique se `MAIL_PASSWORD` é um **App Password** do Google (não sua senha normal)
-- Confirme que a verificação em duas etapas está ativa na conta Google
-- Teste acessando: `http://<IP>/test_db.php`
-
-### Porta 80 bloqueada
-```bash
-# Verifique se o Apache está ouvindo
-docker exec skyguard_app curl -s http://localhost | head -5
-# Se funcionar localmente, o problema é no NSG do Azure
-```
+    {
+      "device_id": "SGP-001",
+      "co2": 412,
+      "tvoc": 45,
+      "token": "skyguard_secret_token"
+    }
