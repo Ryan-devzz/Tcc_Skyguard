@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkyGuard — Contato</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <!-- PWA -->
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#38bdf8">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SkyGuard">
+  <link rel="apple-touch-icon" href="../icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="../icons/icon-192x192.png">
+</head>
+<body>
+  <div id="sidebar-root"></div>
+  <div class="app-layout">
+    <div class="main-content">
+      <div class="topbar">
+        <div class="topbar-title">Contato</div>
+      </div>
+
+      <div class="page">
+        <div class="page-header">
+          <div class="page-title">Fale Conosco</div>
+          <div class="page-subtitle">Dúvidas, sugestões ou suporte técnico</div>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <div class="card mb-4">
+              <div class="card-title">✉️ Enviar Mensagem</div>
+
+              <!-- Status de envio -->
+              <div id="contact-status" style="display:none;margin-bottom:16px;"></div>
+
+              <div class="form-group">
+                <label class="form-label">Assunto</label>
+                <select class="form-control" id="c-subject">
+                  <option value="">Selecione...</option>
+                  <option>Suporte Técnico</option>
+                  <option>Dúvida sobre leituras</option>
+                  <option>Cadastro de dispositivo</option>
+                  <option>Sugestão de melhoria</option>
+                  <option>Outro</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Mensagem</label>
+                <textarea class="form-control" id="c-msg" rows="6"
+                  placeholder="Descreva sua dúvida ou solicitação..."
+                  style="resize:vertical;"></textarea>
+              </div>
+
+              <button class="btn btn-primary" id="send-btn" style="width:100%;" onclick="sendContact()">
+                📨 Enviar Mensagem
+              </button>
+
+              <div style="margin-top:12px;font-size:12px;color:var(--text-muted);text-align:center;">
+                A resposta será enviada para o e-mail da sua conta cadastrada.
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card mb-4">
+              <div class="card-title">📋 Informações</div>
+              <div style="display:flex;flex-direction:column;gap:18px;">
+                <div style="display:flex;gap:14px;align-items:flex-start;">
+                  <div style="font-size:24px;width:36px;text-align:center;">📧</div>
+                  <div>
+                    <div style="font-weight:500;font-size:14px;">E-mail de Suporte</div>
+                    <div style="color:var(--accent);font-size:13px;margin-top:3px;">suporte@skyguard.com</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:14px;align-items:flex-start;">
+                  <div style="font-size:24px;width:36px;text-align:center;">📡</div>
+                  <div>
+                    <div style="font-weight:500;font-size:14px;">MQTT Broker</div>
+                    <div style="color:var(--text-secondary);font-size:13px;margin-top:3px;">broker.emqx.io : 1883</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:14px;align-items:flex-start;">
+                  <div style="font-size:24px;width:36px;text-align:center;">🏫</div>
+                  <div>
+                    <div style="font-weight:500;font-size:14px;">Projeto TCC</div>
+                    <div style="color:var(--text-secondary);font-size:13px;margin-top:3px;">Desenvolvimento de sistema IoT para monitoramento da qualidade do ar</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">❓ FAQ Rápido</div>
+              <div style="display:flex;flex-direction:column;gap:12px;">
+                <details style="cursor:pointer;">
+                  <summary style="font-size:14px;font-weight:500;color:var(--text-primary);padding:8px 0;">
+                    O que é CO₂ e por que monitorar?
+                  </summary>
+                  <p style="font-size:13px;color:var(--text-secondary);padding:8px 0 0 12px;line-height:1.6;">
+                    CO₂ (dióxido de carbono) é produzido pela respiração. Altas concentrações causam
+                    fadiga, dor de cabeça e queda de produtividade. Acima de 1000 ppm, a ventilação é insuficiente.
+                  </p>
+                </details>
+                <details style="cursor:pointer;">
+                  <summary style="font-size:14px;font-weight:500;color:var(--text-primary);padding:8px 0;">
+                    O que são TVOCs?
+                  </summary>
+                  <p style="font-size:13px;color:var(--text-secondary);padding:8px 0 0 12px;line-height:1.6;">
+                    Compostos Orgânicos Voláteis Totais incluem substâncias como benzeno e formaldeído,
+                    emitidos por tintas, solventes e materiais de construção.
+                  </p>
+                </details>
+                <details style="cursor:pointer;">
+                  <summary style="font-size:14px;font-weight:500;color:var(--text-primary);padding:8px 0;">
+                    Com que frequência os dados são atualizados?
+                  </summary>
+                  <p style="font-size:13px;color:var(--text-secondary);padding:8px 0 0 12px;line-height:1.6;">
+                    O ESP32 envia leituras via MQTT a cada 4 segundos. O dashboard atualiza automaticamente.
+                  </p>
+                </details>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+  <script src="../js/nav.js"></script>
+  <script>
+    getUser();
+    renderNav('contact');
+
+    async function sendContact() {
+      const subj = document.getElementById('c-subject').value;
+      const msg  = document.getElementById('c-msg').value.trim();
+      const btn  = document.getElementById('send-btn');
+      const statusEl = document.getElementById('contact-status');
+
+      if (!subj) { showToast('Selecione um assunto.', 'warning'); return; }
+      if (!msg)  { showToast('Digite uma mensagem.', 'warning'); return; }
+
+      // Estado de carregamento
+      btn.disabled    = true;
+      btn.textContent = '⏳ Enviando...';
+      statusEl.style.display = 'none';
+
+      try {
+        // Pega os dados do usuário logado no sessionStorage
+        const sgUser = JSON.parse(sessionStorage.getItem('sg_user') || '{}');
+
+        const resp = await fetch('../api/contact.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subject:      subj,
+            message:      msg,
+            sender_email: sgUser.email || '',
+            sender_name:  sgUser.name  || ''
+          })
+        });
+
+        const data = await resp.json();
+
+        if (resp.ok && data.success) {
+          // Sucesso
+          statusEl.style.display = 'block';
+          statusEl.innerHTML = `
+            <div style="background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.3);
+                        border-radius:8px;padding:14px 16px;display:flex;align-items:center;gap:10px;">
+              <span style="font-size:20px;">✅</span>
+              <div>
+                <div style="font-weight:600;color:var(--success);font-size:14px;">Mensagem enviada!</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
+                  Entraremos em contato pelo e-mail da sua conta em breve.
+                </div>
+              </div>
+            </div>`;
+          showToast('Mensagem enviada com sucesso!', 'success');
+          document.getElementById('c-subject').value = '';
+          document.getElementById('c-msg').value     = '';
+        } else {
+          throw new Error(data.error || 'Erro desconhecido');
+        }
+      } catch (err) {
+        statusEl.style.display = 'block';
+        statusEl.innerHTML = `
+          <div style="background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);
+                      border-radius:8px;padding:14px 16px;display:flex;align-items:center;gap:10px;">
+            <span style="font-size:20px;">❌</span>
+            <div>
+              <div style="font-weight:600;color:var(--danger);font-size:14px;">Falha no envio</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
+                ${err.message}. Tente novamente ou envie diretamente para suporte@skyguard.com
+              </div>
+            </div>
+          </div>`;
+        showToast('Erro ao enviar. Tente novamente.', 'danger');
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = '📨 Enviar Mensagem';
+      }
+    }
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        // Detecta automaticamente o caminho base do site
+        const swPath = document.querySelector('link[rel="manifest"]').href
+          .replace('manifest.json', 'sw.js');
+        navigator.serviceWorker.register(swPath, { scope: './' })
+          .then(reg => {
+            reg.addEventListener("updatefound", () => {
+              const newSW = reg.installing;
+              newSW.addEventListener("statechange", () => {
+                if (newSW.state === "installed" && navigator.serviceWorker.controller) {
+                  newSW.postMessage({ action: "skipWaiting" });
+                }
+              });
+            });
+          })
+          .catch(err => console.warn("[SW] Falha ao registrar:", err));
+      });
+    }
+  </script>
+</body>
+</html>

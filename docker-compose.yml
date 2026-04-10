@@ -1,0 +1,83 @@
+version: '3.9'
+
+services:
+
+  # ── Banco de dados MySQL ──────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: skyguard_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE:      ${DB_NAME}
+      MYSQL_USER:          ${DB_USER}
+      MYSQL_PASSWORD:      ${DB_PASS}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./skyguard_db.sql:/docker-entrypoint-initdb.d/skyguard_db.sql:ro
+    networks:
+      - skyguard_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ── Aplicação PHP (Apache) ────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: skyguard_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Banco
+      DB_HOST:     db
+      DB_USER:     ${DB_USER}
+      DB_PASS:     ${DB_PASS}
+      DB_NAME:     ${DB_NAME}
+      # Email
+      MAIL_HOST:         ${MAIL_HOST}
+      MAIL_PORT:         ${MAIL_PORT}
+      MAIL_USERNAME:     ${MAIL_USERNAME}
+      MAIL_PASSWORD:     ${MAIL_PASSWORD}
+      MAIL_FROM_NAME:    ${MAIL_FROM_NAME}
+      MAIL_RECIPIENT:    ${MAIL_RECIPIENT}
+      # CORS
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      # ESP32
+      ESP_TOKEN: ${ESP_TOKEN:-skyguard_secret_token}
+    ports:
+      - "${APP_PORT:-80}:80"
+    volumes:
+      - ./app:/var/www/html
+    networks:
+      - skyguard_net
+
+  # ── phpMyAdmin (opcional, remova em produção final) ───────────
+  phpmyadmin:
+    image: phpmyadmin:5
+    container_name: skyguard_phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PMA_HOST:     db
+      PMA_USER:     root
+      PMA_PASSWORD: ${DB_ROOT_PASSWORD}
+    ports:
+      - "${PMA_PORT:-8080}:80"
+    networks:
+      - skyguard_net
+
+volumes:
+  db_data:
+
+networks:
+  skyguard_net:
+    driver: bridge

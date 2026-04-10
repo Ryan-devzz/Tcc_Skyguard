@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkyGuard — Gerenciar Dispositivos</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <!-- PWA -->
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#38bdf8">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SkyGuard">
+  <link rel="apple-touch-icon" href="../icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="../icons/icon-192x192.png">
+</head>
+<body>
+  <div id="sidebar-root"></div>
+  <div class="app-layout">
+    <div class="main-content">
+      <div class="topbar">
+        <div class="topbar-title">Gerenciar Dispositivos</div>
+        <div class="topbar-actions">
+          <button class="btn btn-primary btn-sm" onclick="openModal('modalDevice')">+ Cadastrar Dispositivo</button>
+        </div>
+      </div>
+
+      <div class="page">
+        <div class="page-header">
+          <div class="page-title">Dispositivos Cadastrados</div>
+          <div class="page-subtitle">Gerencie os sensores SGP30/ESP32 conectados à plataforma</div>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nome</th>
+                  <th>Localização</th>
+                  <th>Tópico MQTT</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="deviceTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL -->
+  <div class="modal-overlay" id="modalDevice">
+    <div class="modal" style="max-width:560px;">
+      <div class="modal-header">
+        <div class="modal-title" id="devModalTitle">Cadastrar Dispositivo</div>
+        <button class="modal-close" onclick="closeModal('modalDevice')">✕</button>
+      </div>
+      <input type="hidden" id="editDevIdx" value="-1">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">ID do Dispositivo</label>
+          <input type="text" class="form-control" id="d-id" placeholder="SGP-004">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nome</label>
+          <input type="text" class="form-control" id="d-name" placeholder="Sala de Reuniões">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Localização</label>
+        <input type="text" class="form-control" id="d-location" placeholder="2º Andar — Bloco D">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Broker MQTT</label>
+          <input type="text" class="form-control" id="d-broker" value="broker.emqx.io">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Porta</label>
+          <input type="text" class="form-control" id="d-port" value="1883">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-control" id="d-status">
+          <option value="online">Online</option>
+          <option value="offline">Offline</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button class="btn btn-primary" onclick="saveDevice()" style="flex:1;">Salvar</button>
+        <button class="btn btn-secondary" onclick="closeModal('modalDevice')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+  <script src="../js/nav.js"></script>
+  <script>
+    const user = getUser();
+    if (user.role !== 'admin') { window.location.href = 'dashboard.html'; }
+    renderNav('devices-admin');
+
+    let devices = [
+      { id: 'SGP-001', name: 'Sala Principal', location: 'Térreo — Bloco A', broker: 'broker.emqx.io', port: '1883', status: 'online' },
+      { id: 'SGP-002', name: 'Lab. Química', location: '1º Andar — Bloco B', broker: 'broker.emqx.io', port: '1883', status: 'online' },
+      { id: 'SGP-003', name: 'Corredor Norte', location: 'Térreo — Bloco C', broker: 'broker.emqx.io', port: '1883', status: 'online' },
+    ];
+
+    let delIdx = -1;
+
+    function renderTable() {
+      document.getElementById('deviceTable').innerHTML = devices.map((d, i) => `
+        <tr>
+          <td><span style="font-family:var(--font-display);color:var(--accent);">${d.id}</span></td>
+          <td>${d.name}</td>
+          <td>${d.location}</td>
+          <td><code style="background:var(--bg-panel);padding:2px 8px;border-radius:5px;font-size:12px;">skyguard/${d.id}/data</code></td>
+          <td><span class="status-badge ${d.status}"><span class="status-dot"></span>${d.status === 'online' ? 'Online' : 'Offline'}</span></td>
+          <td>
+            <div style="display:flex;gap:6px;">
+              <a href="device-detail.html?id=${d.id}" class="btn btn-secondary btn-sm">👁 Ver</a>
+              <button class="btn btn-secondary btn-sm" onclick="editDevice(${i})">✏️</button>
+              <button class="btn btn-danger btn-sm" onclick="delDevice(${i})">🗑</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function saveDevice() {
+      const idx = parseInt(document.getElementById('editDevIdx').value);
+      const dev = {
+        id: document.getElementById('d-id').value.trim(),
+        name: document.getElementById('d-name').value.trim(),
+        location: document.getElementById('d-location').value.trim(),
+        broker: document.getElementById('d-broker').value.trim(),
+        port: document.getElementById('d-port').value.trim(),
+        status: document.getElementById('d-status').value,
+      };
+      if (!dev.id || !dev.name) { showToast('Preencha ID e nome.', 'warning'); return; }
+      if (idx === -1) { devices.push(dev); showToast('Dispositivo cadastrado!', 'success'); }
+      else { devices[idx] = dev; showToast('Dispositivo atualizado!', 'success'); }
+      closeModal('modalDevice'); renderTable();
+    }
+
+    function editDevice(i) {
+      const d = devices[i];
+      document.getElementById('devModalTitle').textContent = 'Editar Dispositivo';
+      document.getElementById('editDevIdx').value = i;
+      document.getElementById('d-id').value = d.id;
+      document.getElementById('d-name').value = d.name;
+      document.getElementById('d-location').value = d.location;
+      document.getElementById('d-broker').value = d.broker;
+      document.getElementById('d-port').value = d.port;
+      document.getElementById('d-status').value = d.status;
+      openModal('modalDevice');
+    }
+
+    function delDevice(i) {
+      if (confirm(`Remover "${devices[i].name}"?`)) {
+        devices.splice(i, 1); renderTable(); showToast('Dispositivo removido.', 'danger');
+      }
+    }
+
+    renderTable();
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        // Detecta automaticamente o caminho base do site
+        const swPath = document.querySelector('link[rel="manifest"]').href
+          .replace('manifest.json', 'sw.js');
+        navigator.serviceWorker.register(swPath, { scope: './' })
+          .then(reg => {
+            reg.addEventListener("updatefound", () => {
+              const newSW = reg.installing;
+              newSW.addEventListener("statechange", () => {
+                if (newSW.state === "installed" && navigator.serviceWorker.controller) {
+                  newSW.postMessage({ action: "skipWaiting" });
+                }
+              });
+            });
+          })
+          .catch(err => console.warn("[SW] Falha ao registrar:", err));
+      });
+    }
+  </script>
+</body>
+</html>

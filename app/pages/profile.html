@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkyGuard — Meu Perfil</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <!-- PWA -->
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#38bdf8">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SkyGuard">
+  <link rel="apple-touch-icon" href="../icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="../icons/icon-192x192.png">
+</head>
+<body>
+  <div id="sidebar-root"></div>
+  <div class="app-layout">
+    <div class="main-content">
+      <div class="topbar">
+        <div class="topbar-title">Meu Perfil</div>
+      </div>
+
+      <div class="page">
+        <div class="grid-2">
+          <!-- CARD PERFIL -->
+          <div>
+            <div class="card" style="padding:0;overflow:hidden;" id="profileCard">
+              <div class="profile-banner"></div>
+              <div class="profile-avatar-lg" id="p-avatar">—</div>
+              <div class="profile-info">
+                <div class="profile-name" id="p-name">—</div>
+                <div class="profile-email" id="p-email">—</div>
+                <div class="mt-4">
+                  <span class="status-badge admin" id="p-role">—</span>
+                </div>
+                <div class="divider"></div>
+                <div style="font-size:13px;color:var(--text-secondary);display:flex;flex-direction:column;gap:8px;">
+                  <div>📡 <strong>3</strong> dispositivos monitorados</div>
+                  <div>🕐 Último acesso: <strong>agora</strong></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- EDITAR PERFIL -->
+          <div class="card">
+            <div class="card-title">✏️ Editar Informações</div>
+
+            <div class="form-group">
+              <label class="form-label">Nome Completo</label>
+              <input type="text" class="form-control" id="e-name" placeholder="Seu nome">
+            </div>
+            <div class="form-group">
+              <label class="form-label">E-mail</label>
+              <input type="email" class="form-control" id="e-email" placeholder="email@exemplo.com">
+            </div>
+
+            <div class="divider"></div>
+            <div class="card-title" style="margin-bottom:14px;">🔒 Alterar Senha</div>
+
+            <div class="form-group">
+              <label class="form-label">Senha Atual</label>
+              <input type="password" class="form-control" id="e-pass-old" placeholder="••••••••">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nova Senha</label>
+              <input type="password" class="form-control" id="e-pass-new" placeholder="Mínimo 6 caracteres">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirmar Nova Senha</label>
+              <input type="password" class="form-control" id="e-pass-confirm" placeholder="Repita a nova senha">
+            </div>
+
+            <button class="btn btn-primary" style="width:100%;" onclick="saveProfile()">
+              Salvar Alterações
+            </button>
+          </div>
+        </div>
+
+        <!-- PREFERÊNCIAS DE NOTIFICAÇÃO -->
+        <div class="card mt-4">
+          <div class="card-title">🔔 Preferências de Notificação</div>
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
+              <div>
+                <div style="font-size:14px;font-weight:500;">Alertas de CO₂ elevado</div>
+                <div style="font-size:12px;color:var(--text-muted);">Notificar quando CO₂ > 800 ppm</div>
+              </div>
+              <input type="checkbox" checked style="accent-color:var(--accent);width:18px;height:18px;">
+            </label>
+            <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
+              <div>
+                <div style="font-size:14px;font-weight:500;">Alertas de TVOC elevado</div>
+                <div style="font-size:12px;color:var(--text-muted);">Notificar quando TVOC > 300 ppb</div>
+              </div>
+              <input type="checkbox" checked style="accent-color:var(--accent);width:18px;height:18px;">
+            </label>
+            <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
+              <div>
+                <div style="font-size:14px;font-weight:500;">Dispositivo offline</div>
+                <div style="font-size:12px;color:var(--text-muted);">Notificar quando sensor perder conexão</div>
+              </div>
+              <input type="checkbox" style="accent-color:var(--accent);width:18px;height:18px;">
+            </label>
+          </div>
+          <div class="mt-4">
+            <button class="btn btn-secondary btn-sm" onclick="showToast('Preferências salvas!','success')">Salvar Preferências</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+  <script src="../js/nav.js"></script>
+  <script>
+    const user = getUser();
+    renderNav('profile');
+
+    const initials = user.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase();
+    document.getElementById('p-avatar').textContent = initials;
+    document.getElementById('p-name').textContent = user.name;
+    document.getElementById('p-email').textContent = user.email;
+    document.getElementById('p-role').textContent = user.role === 'admin' ? '⭐ Administrador' : '👤 Usuário';
+    document.getElementById('e-name').value = user.name;
+    document.getElementById('e-email').value = user.email;
+
+    function saveProfile() {
+      const newName = document.getElementById('e-name').value.trim();
+      const newEmail = document.getElementById('e-email').value.trim();
+      const oldPass = document.getElementById('e-pass-old').value;
+      const newPass = document.getElementById('e-pass-new').value;
+      const confPass = document.getElementById('e-pass-confirm').value;
+
+      if (!newName || !newEmail) { showToast('Preencha nome e e-mail.', 'warning'); return; }
+
+      if (newPass) {
+        if (newPass.length < 6) { showToast('Senha deve ter pelo menos 6 caracteres.', 'warning'); return; }
+        if (newPass !== confPass) { showToast('As senhas não coincidem.', 'danger'); return; }
+      }
+
+      // Atualiza sessão
+      const updated = { ...user, name: newName, email: newEmail };
+      sessionStorage.setItem('sg_user', JSON.stringify(updated));
+
+      document.getElementById('p-name').textContent = newName;
+      document.getElementById('p-email').textContent = newEmail;
+      document.getElementById('p-avatar').textContent = newName.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase();
+
+      showToast('Perfil atualizado com sucesso!', 'success');
+    }
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        // Detecta automaticamente o caminho base do site
+        const swPath = document.querySelector('link[rel="manifest"]').href
+          .replace('manifest.json', 'sw.js');
+        navigator.serviceWorker.register(swPath, { scope: './' })
+          .then(reg => {
+            reg.addEventListener("updatefound", () => {
+              const newSW = reg.installing;
+              newSW.addEventListener("statechange", () => {
+                if (newSW.state === "installed" && navigator.serviceWorker.controller) {
+                  newSW.postMessage({ action: "skipWaiting" });
+                }
+              });
+            });
+          })
+          .catch(err => console.warn("[SW] Falha ao registrar:", err));
+      });
+    }
+  </script>
+</body>
+</html>

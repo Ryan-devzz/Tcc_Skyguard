@@ -1,0 +1,14 @@
+# Nunca subir para o Git
+.env
+
+# Dependências (gere com composer install)
+vendor/
+
+# Logs
+*.log
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db

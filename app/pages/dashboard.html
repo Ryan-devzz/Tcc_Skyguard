@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkyGuard — Dashboard</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <!-- PWA -->
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#38bdf8">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SkyGuard">
+  <link rel="apple-touch-icon" href="../icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="../icons/icon-192x192.png">
+</head>
+<body>
+  <div id="sidebar-root"></div>
+
+  <div class="app-layout">
+    <div class="main-content">
+
+      <div class="topbar">
+        <div class="topbar-title">Dashboard</div>
+        <div class="topbar-actions">
+          <div class="live-badge">
+            <div class="live-dot"></div> Ao Vivo
+          </div>
+          <div class="topbar-badge">
+            🔔
+            <div class="badge-dot"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page">
+        <div class="page-header">
+          <div class="page-title">Visão Geral</div>
+          <div class="page-subtitle">Monitoramento em tempo real de todos os dispositivos SGP30</div>
+        </div>
+
+        <!-- STATS -->
+        <div class="stats-grid" id="statsGrid">
+          <div class="stat-card co2 fade-up">
+            <div class="stat-icon">💨</div>
+            <div class="stat-value" id="avg-co2">—<span class="stat-unit">ppm</span></div>
+            <div class="stat-label">CO₂ Médio (rede)</div>
+            <div class="stat-trend up" id="co2-trend">↑ 3% hoje</div>
+          </div>
+          <div class="stat-card tvoc fade-up delay-1">
+            <div class="stat-icon">🧪</div>
+            <div class="stat-value" id="avg-tvoc">—<span class="stat-unit">ppb</span></div>
+            <div class="stat-label">TVOC Médio (rede)</div>
+            <div class="stat-trend up" id="tvoc-trend">↑ 1% hoje</div>
+          </div>
+          <div class="stat-card devices fade-up delay-2">
+            <div class="stat-icon">📡</div>
+            <div class="stat-value" id="online-count">0</div>
+            <div class="stat-label">Dispositivos Online</div>
+            <div class="stat-trend" id="online-trend">Verificando...</div>
+          </div>
+          <div class="stat-card alerts fade-up delay-3">
+            <div class="stat-icon">⚠️</div>
+            <div class="stat-value" id="alert-count">1</div>
+            <div class="stat-label">Alertas Ativos</div>
+            <div class="stat-trend down">⬆ CO₂ elevado</div>
+          </div>
+        </div>
+
+        <!-- ALERTA ATIVO -->
+        <div class="alert warning fade-up mb-4">
+          ⚠️ <strong>Dispositivo SGP-002 (Lab. Química):</strong> CO₂ acima de 800 ppm — verifique a ventilação do ambiente.
+        </div>
+
+        <div class="grid-2">
+          <!-- LEITURAS AO VIVO -->
+          <div class="card fade-up">
+            <div class="card-title">📡 Leituras em Tempo Real</div>
+            <div id="live-readings">
+              <!-- Gerado pelo JS -->
+            </div>
+          </div>
+
+          <!-- GRÁFICO SIMULADO -->
+          <div class="card fade-up delay-1">
+            <div class="card-title">📈 Histórico CO₂ — Últimas Horas</div>
+            <canvas id="chartCO2" style="width:100%;height:200px;"></canvas>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">
+              Dados simulados · integração com banco de dados via PHP
+            </div>
+          </div>
+        </div>
+
+        <!-- DISPOSITIVOS RESUMO -->
+        <div class="card mt-4 fade-up">
+          <div class="flex-between mb-4">
+            <div class="card-title">🗺 Dispositivos Registrados</div>
+            <a href="devices.html" class="btn btn-secondary btn-sm">Ver todos →</a>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Dispositivo</th>
+                  <th>Local</th>
+                  <th>CO₂</th>
+                  <th>TVOC</th>
+                  <th>Qualidade</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="devicesTable">
+                <!-- Gerado pelo JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="../js/nav.js"></script>
+  <script>
+    const user = getUser();
+    renderNav('dashboard');
+
+    const devices = [
+      { id: 'SGP-001', name: 'Sala Principal', location: 'Térreo — Bloco A' },
+      { id: 'SGP-002', name: 'Lab. Química', location: '1º Andar — Bloco B' },
+      { id: 'SGP-003', name: 'Corredor Norte', location: 'Térreo — Bloco C' },
+    ];
+
+    function updateDashboard() {
+      let totalCO2 = 0, totalTVOC = 0, onlineCount = 0;
+      let tableHTML = '';
+      let liveHTML = '';
+
+      devices.forEach(dev => {
+        const isOnline = _deviceOnlineState.isOnline(dev.id);
+        const d = isOnline ? getMQTTData(dev.id) : null;
+
+        if (isOnline && d) {
+          totalCO2 += d.co2;
+          totalTVOC += d.tvoc;
+          onlineCount++;
+        }
+
+        const aqi = d ? getAQILabel(d.iaq) : null;
+        const co2s = d ? getCO2Status(d.co2) : null;
+        const tvocs = d ? getTVOCStatus(d.tvoc) : null;
+
+        const statusCell = isOnline
+          ? `<span class="status-badge online"><span class="status-dot"></span>Online</span>`
+          : `<span class="status-badge" style="background:rgba(248,113,113,0.12);color:var(--danger);border:1px solid rgba(248,113,113,0.25);"><span class="status-dot" style="background:var(--danger);animation:none;"></span>Offline</span>`;
+
+        tableHTML += `
+          <tr style="cursor:pointer;${!isOnline ? 'opacity:0.6;' : ''}" onclick="window.location.href='device-detail.html?id=${dev.id}'">
+            <td>
+              <span style="font-weight:600;">${dev.id}</span>
+              <div style="font-size:12px;color:var(--text-muted);">${dev.name}</div>
+            </td>
+            <td>${dev.location}</td>
+            <td>${d ? `<span style="color:${co2s.color};font-weight:600;">${d.co2}</span> <small>ppm</small>` : '<span style="color:var(--text-muted);">—</span>'}</td>
+            <td>${d ? `<span style="color:${tvocs.color};font-weight:600;">${d.tvoc}</span> <small>ppb</small>` : '<span style="color:var(--text-muted);">—</span>'}</td>
+            <td>
+              ${d ? `
+              <div class="quality-bar-track" style="width:80px;">
+                <div class="quality-bar-fill ${aqi.class}" style="width:${d.iaq}%;"></div>
+              </div>
+              <div style="font-size:11px;color:${aqi.color};margin-top:3px;">${aqi.label}</div>` : '<span style="color:var(--text-muted);font-size:12px;">Sem dados</span>'}
+            </td>
+            <td>${statusCell}</td>
+          </tr>
+        `;
+
+        if (isOnline && d) {
+          liveHTML += `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">
+              <div>
+                <div style="font-weight:500;font-size:14px;">${dev.name}</div>
+                <div style="font-size:12px;color:var(--text-muted);">${dev.id} · ${d.timestamp}</div>
+              </div>
+              <div style="display:flex;gap:12px;align-items:center;">
+                <div style="text-align:center;">
+                  <div style="font-family:var(--font-display);font-weight:700;font-size:18px;color:var(--accent);">${d.co2}</div>
+                  <div style="font-size:10px;color:var(--text-muted);">CO₂ ppm</div>
+                </div>
+                <div style="text-align:center;">
+                  <div style="font-family:var(--font-display);font-weight:700;font-size:18px;color:var(--success);">${d.tvoc}</div>
+                  <div style="font-size:10px;color:var(--text-muted);">TVOC ppb</div>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      });
+
+      if (onlineCount > 0) {
+        document.getElementById('avg-co2').innerHTML = `${Math.floor(totalCO2/onlineCount)}<span class="stat-unit">ppm</span>`;
+        document.getElementById('avg-tvoc').innerHTML = `${Math.floor(totalTVOC/onlineCount)}<span class="stat-unit">ppb</span>`;
+      } else {
+        document.getElementById('avg-co2').innerHTML = `—<span class="stat-unit">ppm</span>`;
+        document.getElementById('avg-tvoc').innerHTML = `—<span class="stat-unit">ppb</span>`;
+      }
+
+      document.getElementById('online-count').textContent = onlineCount;
+      const onlineTrend = document.getElementById('online-trend');
+      onlineTrend.textContent = onlineCount === devices.length ? '✓ Todos ativos' : onlineCount === 0 ? '⚠ Nenhum ativo' : `⚠ ${devices.length - onlineCount} offline`;
+      onlineTrend.className = 'stat-trend ' + (onlineCount === devices.length ? 'up' : 'down');
+
+      if (!liveHTML) liveHTML = `<div style="text-align:center;padding:28px;color:var(--text-muted);font-size:13px;">Nenhum dispositivo online no momento.</div>`;
+
+      document.getElementById('devicesTable').innerHTML = tableHTML;
+      document.getElementById('live-readings').innerHTML = liveHTML;
+    }
+
+    // Gráfico simples com Canvas
+    function drawChart() {
+      const canvas = document.getElementById('chartCO2');
+      const ctx = canvas.getContext('2d');
+      canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+      canvas.height = 200 * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+      const W = canvas.offsetWidth, H = 200;
+      ctx.clearRect(0, 0, W, H);
+
+      const hours = ['08h','09h','10h','11h','12h','13h','14h','15h','16h'];
+      const data1 = [380, 420, 610, 720, 890, 740, 620, 550, 495];
+      const data2 = [400, 430, 450, 490, 510, 480, 460, 440, 420];
+
+      const maxVal = 1000, minVal = 300;
+      const toY = v => H - 30 - ((v - minVal) / (maxVal - minVal)) * (H - 50);
+      const toX = i => 40 + i * ((W - 60) / (hours.length - 1));
+
+      // Grid
+      ctx.strokeStyle = 'rgba(99,179,237,0.08)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 5; i++) {
+        const y = 10 + i * ((H - 40) / 4);
+        ctx.beginPath(); ctx.moveTo(40, y); ctx.lineTo(W - 10, y); ctx.stroke();
+      }
+
+      // Dataset 1 (SGP-002 elevado)
+      ctx.beginPath();
+      data1.forEach((v, i) => i === 0 ? ctx.moveTo(toX(i), toY(v)) : ctx.lineTo(toX(i), toY(v)));
+      ctx.strokeStyle = 'rgba(251,191,36,0.7)'; ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Dataset 2 (SGP-001 normal)
+      ctx.beginPath();
+      data2.forEach((v, i) => i === 0 ? ctx.moveTo(toX(i), toY(v)) : ctx.lineTo(toX(i), toY(v)));
+      ctx.strokeStyle = 'rgba(56,189,248,0.8)'; ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Pontos e labels X
+      ctx.fillStyle = 'rgba(56,189,248,0.9)';
+      data2.forEach((v, i) => {
+        ctx.beginPath(); ctx.arc(toX(i), toY(v), 3, 0, Math.PI*2); ctx.fill();
+      });
+
+      ctx.fillStyle = 'rgba(99,179,237,0.4)';
+      ctx.font = '10px DM Sans, sans-serif';
+      ctx.textAlign = 'center';
+      hours.forEach((h, i) => ctx.fillText(h, toX(i), H - 8));
+
+      // Legenda
+      ctx.fillStyle = 'rgba(56,189,248,0.8)';
+      ctx.fillRect(10, 6, 14, 3);
+      ctx.fillStyle = 'rgba(99,179,237,0.5)'; ctx.font='11px DM Sans'; ctx.textAlign='left';
+      ctx.fillText('SGP-001', 28, 10);
+
+      ctx.fillStyle = 'rgba(251,191,36,0.8)';
+      ctx.fillRect(90, 6, 14, 3);
+      ctx.fillStyle = 'rgba(99,179,237,0.5)';
+      ctx.fillText('SGP-002', 108, 10);
+    }
+
+    updateDashboard();
+    setTimeout(drawChart, 100);
+    setInterval(updateDashboard, 5000); // Atualiza a cada 5 segundos
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        // Detecta automaticamente o caminho base do site
+        const swPath = document.querySelector('link[rel="manifest"]').href
+          .replace('manifest.json', 'sw.js');
+        navigator.serviceWorker.register(swPath, { scope: './' })
+          .then(reg => {
+            reg.addEventListener("updatefound", () => {
+              const newSW = reg.installing;
+              newSW.addEventListener("statechange", () => {
+                if (newSW.state === "installed" && navigator.serviceWorker.controller) {
+                  newSW.postMessage({ action: "skipWaiting" });
+                }
+              });
+            });
+          })
+          .catch(err => console.warn("[SW] Falha ao registrar:", err));
+      });
+    }
+  </script>
+</body>
+</html>

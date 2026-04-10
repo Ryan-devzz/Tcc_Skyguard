@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkyGuard — Usuários</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <!-- PWA -->
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#38bdf8">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SkyGuard">
+  <link rel="apple-touch-icon" href="../icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="../icons/icon-192x192.png">
+</head>
+<body>
+  <div id="sidebar-root"></div>
+
+  <div class="app-layout">
+    <div class="main-content">
+
+      <div class="topbar">
+        <div class="topbar-title">Gerenciar Usuários</div>
+        <div class="topbar-actions">
+          <button class="btn btn-primary btn-sm" onclick="openModal('modalUser')">+ Novo Usuário</button>
+        </div>
+      </div>
+
+      <div class="page">
+        <div class="page-header">
+          <div class="page-title">Usuários do Sistema</div>
+          <div class="page-subtitle">Somente administradores podem cadastrar e gerenciar usuários</div>
+        </div>
+
+        <div class="alert info mb-4">
+          ℹ️ <strong>Área restrita.</strong> Apenas o administrador pode acessar este painel.
+        </div>
+
+        <div class="card">
+          <div class="flex-between mb-4">
+            <div class="card-title">👥 Usuários Cadastrados</div>
+            <input type="text" class="form-control" style="width:220px;" placeholder="🔍 Buscar..." id="searchInput" oninput="filterUsers()">
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>E-mail</th>
+                  <th>Perfil</th>
+                  <th>Cadastro</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="usersTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CRIAR/EDITAR USUÁRIO -->
+  <div class="modal-overlay" id="modalUser">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="modalTitle">Novo Usuário</div>
+        <button class="modal-close" onclick="closeModal('modalUser')">✕</button>
+      </div>
+
+      <input type="hidden" id="editIndex" value="-1">
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Nome Completo</label>
+          <input type="text" class="form-control" id="f-name" placeholder="Ex: João Silva">
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-mail</label>
+          <input type="email" class="form-control" id="f-email" placeholder="email@exemplo.com">
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <input type="password" class="form-control" id="f-pass" placeholder="Mínimo 6 caracteres">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Perfil</label>
+          <select class="form-control" id="f-role">
+            <option value="user">Usuário</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-control" id="f-status">
+          <option value="active">Ativo</option>
+          <option value="inactive">Inativo</option>
+        </select>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button class="btn btn-primary" onclick="saveUser()" style="flex:1;">Salvar Usuário</button>
+        <button class="btn btn-secondary" onclick="closeModal('modalUser')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CONFIRMAR EXCLUSÃO -->
+  <div class="modal-overlay" id="modalDelete">
+    <div class="modal" style="max-width:400px;">
+      <div class="modal-header">
+        <div class="modal-title">Confirmar Exclusão</div>
+        <button class="modal-close" onclick="closeModal('modalDelete')">✕</button>
+      </div>
+      <p style="color:var(--text-secondary);margin-bottom:20px;">
+        Tem certeza que deseja remover este usuário? Esta ação não pode ser desfeita.
+      </p>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-danger" onclick="confirmDelete()" style="flex:1;">Sim, Excluir</button>
+        <button class="btn btn-secondary" onclick="closeModal('modalDelete')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+  <script src="../js/nav.js"></script>
+  <script>
+    const user = getUser();
+    if (user.role !== 'admin') {
+      alert('Acesso restrito a administradores.');
+      window.location.href = 'dashboard.html';
+    }
+    renderNav('users');
+
+    // Em produção: carregar via fetch() do PHP/MySQL
+    let users = [
+      { name: 'Admin SkyGuard', email: 'admin@skyguard.com', role: 'admin', status: 'active', created: '01/01/2025' },
+      { name: 'João Silva', email: 'user@skyguard.com', role: 'user', status: 'active', created: '10/03/2025' },
+      { name: 'Maria Santos', email: 'maria@skyguard.com', role: 'user', status: 'active', created: '15/04/2025' },
+    ];
+
+    let deleteIndex = -1;
+
+    function renderUsers(list) {
+      const tb = document.getElementById('usersTable');
+      if (!list || !list.length) {
+        tb.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px;">Nenhum usuário encontrado.</td></tr>`;
+        return;
+      }
+      tb.innerHTML = list.map((u, i) => `
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="user-avatar" style="width:32px;height:32px;font-size:12px;">${u.name.slice(0,2).toUpperCase()}</div>
+              ${u.name}
+            </div>
+          </td>
+          <td>${u.email}</td>
+          <td>
+            <span class="status-badge ${u.role === 'admin' ? 'admin' : 'online'}">
+              ${u.role === 'admin' ? '⭐ Admin' : '👤 Usuário'}
+            </span>
+          </td>
+          <td>${u.created}</td>
+          <td>
+            <span class="status-badge ${u.status === 'active' ? 'online' : 'offline'}">
+              <span class="status-dot"></span>${u.status === 'active' ? 'Ativo' : 'Inativo'}
+            </span>
+          </td>
+          <td>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-secondary btn-sm" onclick="editUser(${i})">✏️ Editar</button>
+              <button class="btn btn-danger btn-sm" onclick="askDelete(${i})">🗑</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filterUsers() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      renderUsers(users.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)));
+    }
+
+    function saveUser() {
+      const name = document.getElementById('f-name').value.trim();
+      const email = document.getElementById('f-email').value.trim();
+      const pass = document.getElementById('f-pass').value;
+      const role = document.getElementById('f-role').value;
+      const status = document.getElementById('f-status').value;
+      const idx = parseInt(document.getElementById('editIndex').value);
+
+      if (!name || !email) { showToast('Preencha nome e e-mail.', 'warning'); return; }
+
+      const today = new Date().toLocaleDateString('pt-BR');
+      if (idx === -1) {
+        users.push({ name, email, role, status, created: today });
+        showToast('Usuário cadastrado com sucesso!', 'success');
+      } else {
+        users[idx] = { ...users[idx], name, email, role, status };
+        showToast('Usuário atualizado!', 'success');
+      }
+
+      closeModal('modalUser');
+      renderUsers(users);
+    }
+
+    function editUser(i) {
+      const u = users[i];
+      document.getElementById('modalTitle').textContent = 'Editar Usuário';
+      document.getElementById('editIndex').value = i;
+      document.getElementById('f-name').value = u.name;
+      document.getElementById('f-email').value = u.email;
+      document.getElementById('f-role').value = u.role;
+      document.getElementById('f-status').value = u.status;
+      document.getElementById('f-pass').value = '';
+      openModal('modalUser');
+    }
+
+    function askDelete(i) {
+      deleteIndex = i;
+      openModal('modalDelete');
+    }
+
+    function confirmDelete() {
+      users.splice(deleteIndex, 1);
+      closeModal('modalDelete');
+      renderUsers(users);
+      showToast('Usuário removido.', 'danger');
+    }
+
+    document.getElementById('modalUser').addEventListener('click', e => {
+      if (e.target === e.currentTarget) {
+        document.getElementById('editIndex').value = -1;
+        document.getElementById('modalTitle').textContent = 'Novo Usuário';
+        ['f-name','f-email','f-pass'].forEach(id => document.getElementById(id).value = '');
+      }
+    });
+
+    renderUsers(users);
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        // Detecta automaticamente o caminho base do site
+        const swPath = document.querySelector('link[rel="manifest"]').href
+          .replace('manifest.json', 'sw.js');
+        navigator.serviceWorker.register(swPath, { scope: './' })
+          .then(reg => {
+            reg.addEventListener("updatefound", () => {
+              const newSW = reg.installing;
+              newSW.addEventListener("statechange", () => {
+                if (newSW.state === "installed" && navigator.serviceWorker.controller) {
+                  newSW.postMessage({ action: "skipWaiting" });
+                }
+              });
+            });
+          })
+          .catch(err => console.warn("[SW] Falha ao registrar:", err));
+      });
+    }
+  </script>
+</body>
+</html>

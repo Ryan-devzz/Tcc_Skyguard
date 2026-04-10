@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkyGuard — Detalhe do Dispositivo</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .big-reading {
+      text-align: center;
+      padding: 28px 20px;
+    }
+    .big-value {
+      font-family: var(--font-display);
+      font-size: 56px;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .big-unit { font-size: 18px; font-weight: 400; color: var(--text-muted); }
+    .big-label { font-size: 13px; color: var(--text-secondary); margin-top: 6px; }
+    .big-status {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    .mini-stat {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .mini-stat:last-child { border-bottom: none; }
+    .mini-stat-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      background: var(--bg-panel);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .mini-stat-val {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .mini-stat-label { font-size: 12px; color: var(--text-muted); }
+
+    .history-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(99,179,237,0.06);
+      font-size: 13px;
+    }
+    .history-time { color: var(--text-muted); width: 70px; flex-shrink: 0; }
+
+    .threshold-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .day-tab-btn {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: var(--font-body);
+    }
+    .day-tab-btn:hover { border-color: var(--border-hover); color: var(--text-primary); }
+    .day-tab-btn.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <!-- PWA -->
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#38bdf8">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SkyGuard">
+  <link rel="apple-touch-icon" href="../icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="../icons/icon-192x192.png">
+</head>
+<body>
+  <div id="sidebar-root"></div>
+
+  <div class="app-layout">
+    <div class="main-content">
+
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button onclick="window.location.href='devices.html'" class="btn btn-secondary btn-sm">← Voltar</button>
+          <div class="topbar-title" id="page-title">Dispositivo</div>
+        </div>
+        <div class="topbar-actions">
+          <div class="live-badge"><div class="live-dot"></div> Ao Vivo</div>
+          <div id="admin-topbar-actions"></div>
+        </div>
+      </div>
+
+      <div class="page">
+        <!-- CABEÇALHO DO DISPOSITIVO -->
+        <div class="card mb-4 fade-up" id="device-header-card">
+          <div class="flex-between">
+            <div>
+              <div style="font-family:var(--font-display);font-size:22px;font-weight:700;" id="dev-name">—</div>
+              <div style="color:var(--text-muted);font-size:13px;margin-top:4px;" id="dev-location">—</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <span id="dev-status-badge" class="status-badge">—</span>
+              <button id="toggle-btn" onclick="toggleThisDevice()" class="btn btn-sm" style="font-size:11px;">—</button>
+              <div style="font-size:12px;color:var(--text-muted);" id="dev-last">—</div>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div style="display:flex;gap:24px;flex-wrap:wrap;font-size:13px;color:var(--text-secondary);">
+            <span>📟 <strong id="dev-id">—</strong></span>
+            <span>📡 MQTT Broker: <strong>broker.emqx.io:1883</strong></span>
+            <span>🔑 Tópico: <strong id="dev-topic">—</strong></span>
+            <span>🔧 Sensor: <strong>SGP30 + ESP32</strong></span>
+          </div>
+        </div>
+
+        <!-- LEITURAS PRINCIPAIS -->
+        <div class="grid-2 mb-4">
+          <div class="card fade-up delay-1">
+            <div class="big-reading">
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);font-weight:600;margin-bottom:12px;">CO₂ — Dióxido de Carbono</div>
+              <div class="big-value" id="co2-val" style="color:var(--accent);">—</div>
+              <div class="big-unit">ppm</div>
+              <div class="big-label">Partes por Milhão</div>
+              <div class="big-status" id="co2-status">—</div>
+            </div>
+            <div class="quality-bar-track">
+              <div class="quality-bar-fill" id="co2-bar" style="width:0%;background:var(--accent);"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:6px;">
+              <span>0 ppm</span><span>Limite: 1000 ppm</span>
+            </div>
+            <div class="mt-4" style="font-size:13px;color:var(--text-secondary);line-height:1.6;">
+              O <strong>CO₂</strong> é produzido pela respiração humana e combustão. Concentrações acima de 1000 ppm indicam ventilação insuficiente.
+            </div>
+          </div>
+
+          <div class="card fade-up delay-2">
+            <div class="big-reading">
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);font-weight:600;margin-bottom:12px;">TVOC — Compostos Orgânicos Voláteis</div>
+              <div class="big-value" id="tvoc-val" style="color:var(--success);">—</div>
+              <div class="big-unit">ppb</div>
+              <div class="big-label">Partes por Bilhão</div>
+              <div class="big-status" id="tvoc-status">—</div>
+            </div>
+            <div class="quality-bar-track">
+              <div class="quality-bar-fill" id="tvoc-bar" style="width:0%;background:var(--success);"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:6px;">
+              <span>0 ppb</span><span>Limite: 500 ppb</span>
+            </div>
+            <div class="mt-4" style="font-size:13px;color:var(--text-secondary);line-height:1.6;">
+              Os <strong>TVOCs</strong> incluem substâncias como benzeno, formaldeído e solventes. Exposição prolongada pode causar problemas respiratórios.
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-3 mb-4">
+          <!-- QUALIDADE GERAL -->
+          <div class="card fade-up">
+            <div class="card-title">🎯 Qualidade do Ar</div>
+            <div style="display:flex;align-items:center;justify-content:center;flex-direction:column;padding:20px 0;">
+              <div style="position:relative;width:100px;height:100px;">
+                <canvas id="gaugeCanvas" width="100" height="100"></canvas>
+              </div>
+              <div style="font-family:var(--font-display);font-size:22px;font-weight:700;margin-top:12px;" id="aqi-label">—</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:4px;" id="aqi-desc">—</div>
+            </div>
+          </div>
+
+          <!-- HISTÓRICO RÁPIDO -->
+          <div class="card fade-up delay-2">
+            <div class="card-title">🕐 Leituras Recentes</div>
+            <div id="history-list">
+              <!-- Gerado pelo JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- GRÁFICO TEMPO REAL -->
+        <div class="card fade-up mb-4">
+          <div class="flex-between mb-4">
+            <div>
+              <div class="card-title">📈 Leituras em Tempo Real</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Últimas leituras desta sessão · atualiza a cada 4s</div>
+            </div>
+            <div style="display:flex;gap:14px;font-size:12px;align-items:center;">
+              <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:20px;height:2px;background:rgba(56,189,248,0.9);border-radius:2px;"></span>CO₂ (ppm)</span>
+              <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:20px;height:2px;background:rgba(52,211,153,0.9);border-radius:2px;"></span>TVOC (ppb)</span>
+            </div>
+          </div>
+          <div style="position:relative;width:100%;height:220px;"><canvas id="realtimeChart"></canvas></div>
+        </div>
+
+        <!-- COMPARATIVO DIÁRIO -->
+        <div class="card fade-up mb-4" id="daily-chart-card">
+          <div class="flex-between mb-4" style="flex-wrap:wrap;gap:12px;">
+            <div>
+              <div class="card-title">📊 Comparativo Diário</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Média de CO₂ e TVOC por hora ao longo do dia selecionado</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <div style="display:flex;gap:6px;">
+                <button class="day-tab-btn active" data-offset="0" onclick="selectDay(0, this)">Hoje</button>
+                <button class="day-tab-btn" data-offset="1" onclick="selectDay(1, this)">Ontem</button>
+                <button class="day-tab-btn" data-offset="2" onclick="selectDay(2, this)">Anteontem</button>
+              </div>
+              <div style="display:flex;gap:14px;font-size:12px;align-items:center;">
+                <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:20px;height:2px;background:rgba(56,189,248,0.9);border-radius:2px;"></span>CO₂</span>
+                <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:20px;height:2px;background:rgba(52,211,153,0.9);border-radius:2px;"></span>TVOC</span>
+              </div>
+            </div>
+          </div>
+          <div id="daily-chart-loading" style="text-align:center;padding:40px;color:var(--text-muted);font-size:13px;">
+            <div style="font-size:24px;margin-bottom:8px;">⏳</div>Carregando dados do banco...
+          </div>
+          <div id="dailyChartWrap" style="position:relative;width:100%;height:260px;display:none;"><canvas id="dailyChart"></canvas></div>
+          <div id="daily-stats" style="display:none;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;text-align:center;">
+              <div style="padding:12px;background:var(--bg-panel);border-radius:10px;">
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:4px;">CO₂ Médio</div>
+                <div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--accent);" id="stat-co2-avg">—</div>
+                <div style="font-size:10px;color:var(--text-muted);">ppm</div>
+              </div>
+              <div style="padding:12px;background:var(--bg-panel);border-radius:10px;">
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:4px;">CO₂ Máximo</div>
+                <div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--warning);" id="stat-co2-max">—</div>
+                <div style="font-size:10px;color:var(--text-muted);">ppm</div>
+              </div>
+              <div style="padding:12px;background:var(--bg-panel);border-radius:10px;">
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:4px;">TVOC Médio</div>
+                <div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--success);" id="stat-tvoc-avg">—</div>
+                <div style="font-size:10px;color:var(--text-muted);">ppb</div>
+              </div>
+              <div style="padding:12px;background:var(--bg-panel);border-radius:10px;">
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:4px;">TVOC Máximo</div>
+                <div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--warning);" id="stat-tvoc-max">—</div>
+                <div style="font-size:10px;color:var(--text-muted);">ppb</div>
+              </div>
+              <div style="padding:12px;background:var(--bg-panel);border-radius:10px;">
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:4px;">Leituras</div>
+                <div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--text-primary);" id="stat-count">—</div>
+                <div style="font-size:10px;color:var(--text-muted);">registros</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- THRESHOLDS (apenas admin) -->
+        <div class="card fade-up" id="threshold-card" style="display:none;">
+          <div class="card-title">⚙️ Limites de Alerta (Admin)</div>
+          <div class="threshold-row">
+            <div>
+              <div style="font-weight:500;">CO₂ — Alerta</div>
+              <div style="font-size:12px;color:var(--text-muted);">Gera notificação quando ultrapassado</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <input type="number" class="form-control" style="width:100px;" value="800" id="th-co2">
+              <span style="color:var(--text-muted);">ppm</span>
+            </div>
+          </div>
+          <div class="threshold-row">
+            <div>
+              <div style="font-weight:500;">TVOC — Alerta</div>
+              <div style="font-size:12px;color:var(--text-muted);">Gera notificação quando ultrapassado</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <input type="number" class="form-control" style="width:100px;" value="300" id="th-tvoc">
+              <span style="color:var(--text-muted);">ppb</span>
+            </div>
+          </div>
+          <div class="mt-4">
+            <button class="btn btn-primary btn-sm" onclick="saveThresholds()">Salvar Limites</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+  <script src="../js/nav.js"></script>
+  <script>
+    const user = getUser();
+    renderNav('devices');
+
+    const params = new URLSearchParams(location.search);
+    const devId = params.get('id') || 'SGP-001';
+
+    const deviceMeta = {
+      'SGP-001': { name: 'Sala Principal', location: '📍 Térreo — Bloco A' },
+      'SGP-002': { name: 'Lab. Química', location: '📍 1º Andar — Bloco B' },
+      'SGP-003': { name: 'Corredor Norte', location: '📍 Térreo — Bloco C' },
+    };
+
+    const meta = deviceMeta[devId] || deviceMeta['SGP-001'];
+    document.getElementById('page-title').textContent = meta.name;
+    document.getElementById('dev-name').textContent = meta.name;
+    document.getElementById('dev-location').textContent = meta.location;
+    document.getElementById('dev-id').textContent = devId;
+    document.getElementById('dev-topic').textContent = `skyguard/${devId}/data`;
+
+    if (user.role === 'admin') {
+      document.getElementById('threshold-card').style.display = 'block';
+      document.getElementById('admin-topbar-actions').innerHTML =
+        `<a href="devices-admin.html" class="btn btn-secondary btn-sm">⚙️ Editar</a>`;
+    }
+
+    // ── TOGGLE CONEXÃO ────────────────────────────────────────────────────────
+    function toggleThisDevice() {
+      _deviceOnlineState.toggle(devId);
+      _updateMQTTStatus();
+      updateDetail();
+    }
+
+    function updateStatusBadge(isOnline) {
+      const badge = document.getElementById('dev-status-badge');
+      const btn   = document.getElementById('toggle-btn');
+      if (isOnline) {
+        badge.className = 'status-badge online';
+        badge.innerHTML = '<span class="status-dot"></span>Online';
+        btn.style.cssText = 'font-size:11px;padding:3px 10px;background:rgba(248,113,113,0.1);color:var(--danger);border:1px solid rgba(248,113,113,0.3);';
+        btn.textContent = '⏻ Desconectar';
+      } else {
+        badge.className = 'status-badge';
+        badge.style.cssText = 'background:rgba(248,113,113,0.12);color:var(--danger);border:1px solid rgba(248,113,113,0.25);';
+        badge.innerHTML = '<span class="status-dot" style="background:var(--danger);animation:none;"></span>Offline';
+        btn.style.cssText = 'font-size:11px;padding:3px 10px;background:rgba(52,211,153,0.1);color:var(--success);border:1px solid rgba(52,211,153,0.3);';
+        btn.textContent = '⏻ Conectar';
+      }
+    }
+
+    // ── GAUGE ─────────────────────────────────────────────────────────────────
+    function drawGauge(iaq) {
+      const c = document.getElementById('gaugeCanvas');
+      if (!c) return;
+      const ctx = c.getContext('2d');
+      const cx = 50, cy = 50, r = 38;
+      ctx.clearRect(0, 0, 100, 100);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(99,179,237,0.1)';
+      ctx.lineWidth = 8;
+      ctx.stroke();
+      const start = -Math.PI / 2;
+      const end = start + (iaq / 100) * Math.PI * 2;
+      const color = iaq >= 80 ? '#34d399' : iaq >= 50 ? '#fbbf24' : '#f87171';
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, start, end);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 8;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      ctx.fillStyle = '#e8f0fe';
+      ctx.font = 'bold 20px Syne, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(iaq, cx, cy);
+    }
+
+    // ── GRÁFICO TEMPO REAL (Chart.js) ─────────────────────────────────────────
+    const RT_MAX = 40; // máximo de pontos no gráfico ao vivo
+    const realtimeData = { labels: [], co2: [], tvoc: [] };
+    let realtimeChart = null;
+
+    function initRealtimeChart() {
+      const ctx = document.getElementById('realtimeChart').getContext('2d');
+      realtimeChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: realtimeData.labels,
+          datasets: [
+            {
+              label: 'CO₂ (ppm)',
+              data: realtimeData.co2,
+              borderColor: 'rgba(56,189,248,0.9)',
+              backgroundColor: 'rgba(56,189,248,0.07)',
+              borderWidth: 2,
+              pointRadius: 2,
+              pointHoverRadius: 4,
+              tension: 0.4,
+              fill: true,
+              yAxisID: 'yCO2',
+            },
+            {
+              label: 'TVOC (ppb)',
+              data: realtimeData.tvoc,
+              borderColor: 'rgba(52,211,153,0.9)',
+              backgroundColor: 'rgba(52,211,153,0.07)',
+              borderWidth: 2,
+              pointRadius: 2,
+              pointHoverRadius: 4,
+              tension: 0.4,
+              fill: true,
+              yAxisID: 'yTVOC',
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 300 },
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(15,23,36,0.95)',
+              titleColor: 'rgba(232,240,254,0.7)',
+              bodyColor: '#e8f0fe',
+              borderColor: 'rgba(56,189,248,0.2)',
+              borderWidth: 1,
+              padding: 10,
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: 'rgba(99,179,237,0.5)', font: { size: 10 }, maxTicksLimit: 8 },
+              grid: { color: 'rgba(99,179,237,0.06)' }
+            },
+            yCO2: {
+              position: 'left',
+              ticks: { color: 'rgba(56,189,248,0.7)', font: { size: 10 } },
+              grid: { color: 'rgba(99,179,237,0.06)' },
+              title: { display: true, text: 'CO₂ ppm', color: 'rgba(56,189,248,0.5)', font: { size: 10 } }
+            },
+            yTVOC: {
+              position: 'right',
+              ticks: { color: 'rgba(52,211,153,0.7)', font: { size: 10 } },
+              grid: { drawOnChartArea: false },
+              title: { display: true, text: 'TVOC ppb', color: 'rgba(52,211,153,0.5)', font: { size: 10 } }
+            }
+          }
+        }
+      });
+    }
+
+    function pushRealtimePoint(co2, tvoc, timestamp) {
+      realtimeData.labels.push(timestamp);
+      realtimeData.co2.push(co2);
+      realtimeData.tvoc.push(tvoc);
+      if (realtimeData.labels.length > RT_MAX) {
+        realtimeData.labels.shift();
+        realtimeData.co2.shift();
+        realtimeData.tvoc.shift();
+      }
+      if (realtimeChart) realtimeChart.update('none');
+    }
+
+    // ── GRÁFICO DIÁRIO (Chart.js) ──────────────────────────────────────────────
+    let dailyChart = null;
+    let currentDayOffset = 0;
+
+    function getDateStr(offsetDays) {
+      const d = new Date();
+      d.setDate(d.getDate() - offsetDays);
+      return d.toISOString().slice(0, 10); // YYYY-MM-DD
+    }
+
+    // Agrupa leituras por hora e calcula médias
+    function groupByHour(readings) {
+      const hours = {};
+      readings.forEach(r => {
+        const h = new Date(r.created_at).getHours();
+        const key = String(h).padStart(2, '0') + 'h';
+        if (!hours[key]) hours[key] = { co2: [], tvoc: [], hour: h };
+        hours[key].co2.push(parseFloat(r.co2));
+        hours[key].tvoc.push(parseFloat(r.tvoc));
+      });
+      // Garante todas as 24h presentes (sem leitura = null)
+      const result = { labels: [], co2: [], tvoc: [], raw: hours };
+      for (let h = 0; h < 24; h++) {
+        const key = String(h).padStart(2, '0') + 'h';
+        result.labels.push(key);
+        if (hours[key]) {
+          const avg = arr => Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
+          result.co2.push(avg(hours[key].co2));
+          result.tvoc.push(avg(hours[key].tvoc));
+        } else {
+          result.co2.push(null);
+          result.tvoc.push(null);
+        }
+      }
+      return result;
+    }
+
+    // Gera dados simulados para um dia (quando API não disponível)
+    function simulateDayData(dateStr, offsetDays) {
+      const base = {
+        'SGP-001': { co2: 420, tvoc: 48 },
+        'SGP-002': { co2: 870, tvoc: 195 },
+        'SGP-003': { co2: 610, tvoc: 92 },
+      }[devId] || { co2: 500, tvoc: 80 };
+
+      const seed = (dateStr + devId).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+      const rng = (s) => { s = Math.sin(s) * 43758.5453; return s - Math.floor(s); };
+
+      const readings = [];
+      for (let h = 0; h < 24; h++) {
+        // Padrão diário: manhã e tarde com mais atividade
+        const dayCurve = Math.sin((h - 6) * Math.PI / 12) * 0.4 + 0.6;
+        const noise = rng(seed + h + offsetDays * 100);
+        readings.push({
+          created_at: dateStr + 'T' + String(h).padStart(2,'0') + ':00:00',
+          co2:  Math.round(base.co2 * dayCurve + (noise - 0.5) * 120),
+          tvoc: Math.round(base.tvoc * dayCurve + (noise - 0.5) * 40),
+        });
+      }
+      return readings;
+    }
+
+    // Busca dados da API ou usa simulação como fallback
+    async function fetchDayReadings(offsetDays) {
+      const dateStr = getDateStr(offsetDays);
+      const fromTs  = dateStr + ' 00:00:00';
+      try {
+        const url = `../api/readings.php?device_id=${encodeURIComponent(devId)}&from=${encodeURIComponent(fromTs)}&limit=500`;
+        const resp = await fetch(url, { credentials: 'same-origin' });
+        if (!resp.ok) throw new Error('API ' + resp.status);
+        const data = await resp.json();
+        // Filtra apenas leituras do dia solicitado
+        if (Array.isArray(data) && data.length > 0) {
+          const dayReadings = data.filter(r => r.created_at && r.created_at.startsWith(dateStr));
+          if (dayReadings.length > 0) return { source: 'api', readings: dayReadings };
+        }
+        // Sem dados no banco para este dia → simulação
+        return { source: 'simulated', readings: simulateDayData(dateStr, offsetDays) };
+      } catch (e) {
+        // API inacessível → simulação
+        return { source: 'simulated', readings: simulateDayData(dateStr, offsetDays) };
+      }
+    }
+
+    function renderDailyStats(readings) {
+      if (!readings.length) return;
+      const co2vals  = readings.map(r => parseFloat(r.co2)).filter(v => !isNaN(v));
+      const tvocvals = readings.map(r => parseFloat(r.tvoc)).filter(v => !isNaN(v));
+      const avg = arr => Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
+      document.getElementById('stat-co2-avg').textContent  = avg(co2vals);
+      document.getElementById('stat-co2-max').textContent  = Math.round(Math.max(...co2vals));
+      document.getElementById('stat-tvoc-avg').textContent = avg(tvocvals);
+      document.getElementById('stat-tvoc-max').textContent = Math.round(Math.max(...tvocvals));
+      document.getElementById('stat-count').textContent    = readings.length;
+      document.getElementById('daily-stats').style.display = 'block';
+    }
+
+    async function loadDailyChart(offsetDays) {
+      const loading = document.getElementById('daily-chart-loading');
+      const canvas  = document.getElementById('dailyChart');
+      const stats   = document.getElementById('daily-stats');
+      loading.style.display = 'block';
+      document.getElementById('dailyChartWrap').style.display = 'none';
+      canvas.style.display = 'block';
+      stats.style.display   = 'none';
+
+      const { source, readings } = await fetchDayReadings(offsetDays);
+      const grouped = groupByHour(readings);
+
+      loading.style.display = 'none';
+      document.getElementById('dailyChartWrap').style.display = 'block';
+      canvas.style.display = 'block';
+
+      // Aviso fonte dos dados
+      const card = document.getElementById('daily-chart-card');
+      let src = card.querySelector('.data-source-note');
+      if (!src) { src = document.createElement('div'); src.className = 'data-source-note'; card.querySelector('.flex-between').appendChild(src); }
+      src.style.cssText = 'font-size:10px;color:var(--text-muted);margin-top:4px;text-align:right;width:100%;';
+      src.textContent = source === 'api' ? `✓ ${readings.length} leituras do banco de dados` : `⚠ Dados simulados (banco sem registros para este dia)`;
+
+      if (dailyChart) {
+        dailyChart.data.labels = grouped.labels;
+        dailyChart.data.datasets[0].data = grouped.co2;
+        dailyChart.data.datasets[1].data = grouped.tvoc;
+        dailyChart.update();
+      } else {
+        const ctx = canvas.getContext('2d');
+        dailyChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: grouped.labels,
+            datasets: [
+              {
+                label: 'CO₂ médio (ppm)',
+                data: grouped.co2,
+                backgroundColor: 'rgba(56,189,248,0.25)',
+                borderColor: 'rgba(56,189,248,0.8)',
+                borderWidth: 1.5,
+                borderRadius: 4,
+                yAxisID: 'yCO2',
+                type: 'bar',
+                order: 2,
+              },
+              {
+                label: 'TVOC médio (ppb)',
+                data: grouped.tvoc,
+                borderColor: 'rgba(52,211,153,0.9)',
+                backgroundColor: 'rgba(52,211,153,0.07)',
+                borderWidth: 2,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                tension: 0.4,
+                fill: false,
+                yAxisID: 'yTVOC',
+                type: 'line',
+                order: 1,
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(15,23,36,0.95)',
+                titleColor: 'rgba(232,240,254,0.7)',
+                bodyColor: '#e8f0fe',
+                borderColor: 'rgba(56,189,248,0.2)',
+                borderWidth: 1,
+                padding: 10,
+                callbacks: {
+                  label: ctx => {
+                    const v = ctx.raw;
+                    if (v === null) return ctx.dataset.label + ': sem dados';
+                    return ctx.dataset.label + ': ' + v;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                ticks: { color: 'rgba(99,179,237,0.5)', font: { size: 10 } },
+                grid: { color: 'rgba(99,179,237,0.06)' }
+              },
+              yCO2: {
+                position: 'left',
+                ticks: { color: 'rgba(56,189,248,0.7)', font: { size: 10 } },
+                grid: { color: 'rgba(99,179,237,0.06)' },
+                title: { display: true, text: 'CO₂ (ppm)', color: 'rgba(56,189,248,0.5)', font: { size: 10 } }
+              },
+              yTVOC: {
+                position: 'right',
+                ticks: { color: 'rgba(52,211,153,0.7)', font: { size: 10 } },
+                grid: { drawOnChartArea: false },
+                title: { display: true, text: 'TVOC (ppb)', color: 'rgba(52,211,153,0.5)', font: { size: 10 } }
+              }
+            }
+          }
+        });
+      }
+
+      renderDailyStats(readings);
+    }
+
+    function selectDay(offsetDays, btn) {
+      currentDayOffset = offsetDays;
+      document.querySelectorAll('.day-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadDailyChart(offsetDays);
+    }
+
+    // Recarrega o gráfico diário do dia atual a cada 60s (para "hoje")
+    setInterval(() => {
+      if (currentDayOffset === 0) loadDailyChart(0);
+    }, 60000);
+
+    // ── HISTÓRICO (lista lateral) ─────────────────────────────────────────────
+    const sessionHistory = [];
+
+    // ── LOOP PRINCIPAL — leituras em tempo real ───────────────────────────────
+    async function fetchLatestFromAPI() {
+      try {
+        const resp = await fetch(`../api/readings.php?device_id=${encodeURIComponent(devId)}&latest=1`, { credentials: 'same-origin' });
+        if (!resp.ok) return null;
+        const d = await resp.json();
+        if (d && d.co2 !== undefined) return d;
+        return null;
+      } catch { return null; }
+    }
+
+    function updateDetail() {
+      const isOnline = _deviceOnlineState.isOnline(devId);
+      updateStatusBadge(isOnline);
+
+      if (!isOnline) {
+        document.getElementById('co2-val').textContent = '—';
+        document.getElementById('tvoc-val').textContent = '—';
+        document.getElementById('aqi-label').textContent = 'Sem dados';
+        document.getElementById('aqi-label').style.color = 'var(--text-muted)';
+        document.getElementById('aqi-desc').textContent = 'Dispositivo offline';
+        document.getElementById('co2-status').textContent = '—';
+        document.getElementById('tvoc-status').textContent = '—';
+        document.getElementById('co2-bar').style.width = '0%';
+        document.getElementById('tvoc-bar').style.width = '0%';
+        document.getElementById('dev-last').textContent = 'Sem conexão';
+        drawGauge(0);
+        return;
+      }
+
+      // Tenta API; se falhar usa simulação
+      fetchLatestFromAPI().then(apiData => {
+        const d = apiData ? {
+          co2: Math.round(parseFloat(apiData.co2)),
+          tvoc: Math.round(parseFloat(apiData.tvoc)),
+          iaq: 87, // IAQ não está na API, calculado localmente
+          timestamp: new Date(apiData.created_at).toLocaleTimeString('pt-BR')
+        } : getMQTTData(devId);
+
+        if (!d) return;
+
+        // Recalcula IAQ com base no CO2 e TVOC
+        const iaqFromCO2  = Math.max(0, 100 - ((d.co2 - 400) / 600) * 60);
+        const iaqFromTVOC = Math.max(0, 100 - (d.tvoc / 300) * 60);
+        d.iaq = Math.round((iaqFromCO2 + iaqFromTVOC) / 2);
+
+        const aqi  = getAQILabel(d.iaq);
+        const co2s = getCO2Status(d.co2);
+        const tvcs = getTVOCStatus(d.tvoc);
+
+        document.getElementById('co2-val').textContent = d.co2;
+        document.getElementById('tvoc-val').textContent = d.tvoc;
+        document.getElementById('aqi-label').textContent = aqi.label;
+        document.getElementById('aqi-label').style.color = aqi.color;
+        document.getElementById('aqi-desc').textContent =
+          d.iaq >= 80 ? 'Ambiente seguro para permanência' :
+          d.iaq >= 50 ? 'Recomenda-se aumentar ventilação' : 'Evacuar ou ventilar imediatamente';
+        document.getElementById('dev-last').textContent = `Atualizado: ${d.timestamp}`;
+
+        document.getElementById('co2-status').textContent = co2s.label;
+        document.getElementById('co2-status').style.cssText = `background:${co2s.color}22;color:${co2s.color};border-radius:20px;padding:3px 10px;`;
+        document.getElementById('tvoc-status').textContent = tvcs.label;
+        document.getElementById('tvoc-status').style.cssText = `background:${tvcs.color}22;color:${tvcs.color};border-radius:20px;padding:3px 10px;`;
+
+        const co2Pct  = Math.min((d.co2 / 1000) * 100, 100);
+        const tvocPct = Math.min((d.tvoc / 500) * 100, 100);
+        document.getElementById('co2-bar').style.width = co2Pct + '%';
+        document.getElementById('co2-bar').style.background =
+          d.co2 < 600 ? 'var(--success)' : d.co2 < 1000 ? 'var(--warning)' : 'var(--danger)';
+        document.getElementById('tvoc-bar').style.width = tvocPct + '%';
+        document.getElementById('tvoc-bar').style.background =
+          d.tvoc < 100 ? 'var(--success)' : d.tvoc < 300 ? 'var(--warning)' : 'var(--danger)';
+
+        drawGauge(d.iaq);
+
+        // Push ao gráfico em tempo real
+        pushRealtimePoint(d.co2, d.tvoc, d.timestamp);
+
+        // Histórico lateral (lista)
+        sessionHistory.push({ ...d });
+        if (sessionHistory.length > 20) sessionHistory.shift();
+        const hList = document.getElementById('history-list');
+        if (hList) {
+          hList.innerHTML = sessionHistory.slice(-6).reverse().map(h => `
+            <div class="history-row">
+              <span class="history-time">${h.timestamp}</span>
+              <span style="color:var(--accent);font-weight:600;">${h.co2} ppm</span>
+              <span style="color:var(--success);font-weight:600;">${h.tvoc} ppb</span>
+            </div>
+          `).join('');
+        }
+      });
+    }
+
+    function saveThresholds() {
+      showToast('Limites de alerta salvos com sucesso!', 'success');
+    }
+
+    // ── INICIALIZAÇÃO ─────────────────────────────────────────────────────────
+    initRealtimeChart();
+    loadDailyChart(0);
+    updateDetail();
+    setInterval(updateDetail, 4000);
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        // Detecta automaticamente o caminho base do site
+        const swPath = document.querySelector('link[rel="manifest"]').href
+          .replace('manifest.json', 'sw.js');
+        navigator.serviceWorker.register(swPath, { scope: './' })
+          .then(reg => {
+            reg.addEventListener("updatefound", () => {
+              const newSW = reg.installing;
+              newSW.addEventListener("statechange", () => {
+                if (newSW.state === "installed" && navigator.serviceWorker.controller) {
+                  newSW.postMessage({ action: "skipWaiting" });
+                }
+              });
+            });
+          })
+          .catch(err => console.warn("[SW] Falha ao registrar:", err));
+      });
+    }
+  </script>
+</body>
+</html>

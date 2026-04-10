@@ -1,0 +1,10 @@
+{
+  "name": "skyguard/skyguard",
+  "description": "SkyGuard — Sistema de Monitoramento de Qualidade do Ar",
+  "require": {
+    "phpmailer/phpmailer": "^6.9"
+  },
+  "config": {
+    "optimize-autoloader": true
+  }
+}

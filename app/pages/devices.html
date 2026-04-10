@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkyGuard — Dispositivos</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <!-- PWA -->
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#38bdf8">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SkyGuard">
+  <link rel="apple-touch-icon" href="../icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="../icons/icon-192x192.png">
+</head>
+<body>
+  <div id="sidebar-root"></div>
+
+  <div class="app-layout">
+    <div class="main-content">
+
+      <div class="topbar">
+        <div class="topbar-title">Dispositivos</div>
+        <div class="topbar-actions">
+          <div class="live-badge"><div class="live-dot"></div> Ao Vivo</div>
+        </div>
+      </div>
+
+      <div class="page">
+        <div class="flex-between mb-4">
+          <div>
+            <div class="page-title">Dispositivos Cadastrados</div>
+            <div class="page-subtitle">Clique em um dispositivo para ver leituras detalhadas</div>
+          </div>
+          <div id="add-btn-wrap"></div>
+        </div>
+
+        <div class="grid-auto" id="deviceGrid">
+          <!-- Gerado pelo JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/nav.js"></script>
+  <script>
+    const user = getUser();
+    renderNav('devices');
+
+    // Mostra botão de adicionar apenas para admin
+    if (user.role === 'admin') {
+      document.getElementById('add-btn-wrap').innerHTML =
+        `<a href="devices-admin.html" class="btn btn-primary">+ Gerenciar Dispositivos</a>`;
+    }
+
+    const devices = [
+      { id: 'SGP-001', name: 'Sala Principal', location: 'Térreo — Bloco A', status: 'online' },
+      { id: 'SGP-002', name: 'Lab. Química', location: '1º Andar — Bloco B', status: 'online' },
+      { id: 'SGP-003', name: 'Corredor Norte', location: 'Térreo — Bloco C', status: 'online' },
+    ];
+
+    function toggleDevice(event, devId) {
+      event.stopPropagation(); // Não navegar para detalhe ao clicar no botão
+      _deviceOnlineState.toggle(devId);
+      renderDevices();
+      _updateMQTTStatus();
+    }
+
+    function renderDevices() {
+      const grid = document.getElementById('deviceGrid');
+      let html = '';
+
+      devices.forEach((dev, i) => {
+        const isOnline = _deviceOnlineState.isOnline(dev.id);
+        const d = isOnline ? getMQTTData(dev.id) : null;
+        const aqi = d ? getAQILabel(d.iaq) : null;
+        const co2s = d ? getCO2Status(d.co2) : null;
+        const tvocs = d ? getTVOCStatus(d.tvoc) : null;
+
+        const statusBadge = isOnline
+          ? `<span class="status-badge online"><span class="status-dot"></span>Online</span>`
+          : `<span class="status-badge offline" style="background:rgba(248,113,113,0.12);color:var(--danger);border:1px solid rgba(248,113,113,0.25);"><span class="status-dot" style="background:var(--danger);animation:none;"></span>Offline</span>`;
+
+        const readingsHtml = isOnline && d ? `
+          <div style="margin-bottom:12px;">
+            <div class="quality-bar-label">
+              <span>Qualidade do Ar</span>
+              <span style="color:${aqi.color};font-weight:600;">${aqi.label}</span>
+            </div>
+            <div class="quality-bar-track">
+              <div class="quality-bar-fill ${aqi.class}" style="width:${d.iaq}%;"></div>
+            </div>
+          </div>
+          <div class="device-readings">
+            <div class="reading-box">
+              <div class="reading-label">CO₂</div>
+              <div class="reading-value co2">${d.co2}<span class="reading-unit">ppm</span></div>
+              <div style="font-size:11px;margin-top:4px;color:${co2s.color};">${co2s.label}</div>
+            </div>
+            <div class="reading-box">
+              <div class="reading-label">TVOC</div>
+              <div class="reading-value tvoc">${d.tvoc}<span class="reading-unit">ppb</span></div>
+              <div style="font-size:11px;margin-top:4px;color:${tvocs.color};">${tvocs.label}</div>
+            </div>
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:var(--text-muted);text-align:right;">🕐 ${d.timestamp}</div>
+        ` : `
+          <div style="text-align:center;padding:28px 0;color:var(--text-muted);font-size:13px;">
+            <div style="font-size:28px;margin-bottom:8px;">📵</div>
+            Dispositivo offline — sem dados disponíveis
+          </div>
+        `;
+
+        html += `
+          <div class="device-card fade-up" style="animation-delay:${i*0.08}s;${!isOnline ? 'opacity:0.7;' : ''}"
+               onclick="window.location.href='device-detail.html?id=${dev.id}'">
+            <div class="device-header">
+              <div>
+                <div class="device-name">${dev.name}</div>
+                <div class="device-location">📍 ${dev.location}</div>
+              </div>
+              ${statusBadge}
+            </div>
+
+            ${readingsHtml}
+
+            <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-size:12px;font-family:var(--font-display);color:var(--text-muted);">${dev.id}</span>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <button
+                  onclick="toggleDevice(event, '${dev.id}')"
+                  class="btn btn-sm"
+                  style="font-size:11px;padding:3px 10px;background:${isOnline ? 'rgba(248,113,113,0.1)' : 'rgba(52,211,153,0.1)'};color:${isOnline ? 'var(--danger)' : 'var(--success)'};border:1px solid ${isOnline ? 'rgba(248,113,113,0.3)' : 'rgba(52,211,153,0.3)'};"
+                >${isOnline ? '⏻ Desconectar' : '⏻ Conectar'}</button>
+                <span style="font-size:12px;color:var(--accent);font-weight:500;">Ver →</span>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      grid.innerHTML = html;
+    }
+
+    renderDevices();
+    setInterval(renderDevices, 5000);
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        // Detecta automaticamente o caminho base do site
+        const swPath = document.querySelector('link[rel="manifest"]').href
+          .replace('manifest.json', 'sw.js');
+        navigator.serviceWorker.register(swPath, { scope: './' })
+          .then(reg => {
+            reg.addEventListener("updatefound", () => {
+              const newSW = reg.installing;
+              newSW.addEventListener("statechange", () => {
+                if (newSW.state === "installed" && navigator.serviceWorker.controller) {
+                  newSW.postMessage({ action: "skipWaiting" });
+                }
+              });
+            });
+          })
+          .catch(err => console.warn("[SW] Falha ao registrar:", err));
+      });
+    }
+  </script>
+</body>
+</html>

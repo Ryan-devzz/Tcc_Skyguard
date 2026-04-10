@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkyGuard — Início</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      transition: var(--transition);
+    }
+    .feature-card:hover { border-color: var(--border-hover); transform: translateY(-3px); box-shadow: var(--shadow-accent); }
+    .feature-icon { font-size: 32px; margin-bottom: 14px; }
+    .feature-title { font-family: var(--font-display); font-weight: 700; font-size: 17px; margin-bottom: 8px; }
+    .feature-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+
+    .section { padding: 60px 32px; }
+    .section-label {
+      display: inline-block;
+      background: var(--accent-dim);
+      border: 1px solid rgba(56,189,248,0.2);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 14px;
+    }
+    .section-title {
+      font-family: var(--font-display);
+      font-size: clamp(26px, 3vw, 36px);
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+    .section-desc { font-size: 16px; color: var(--text-secondary); max-width: 560px; line-height: 1.7; }
+
+    .spec-row {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 0; border-bottom: 1px solid var(--border);
+    }
+    .spec-row:last-child { border-bottom: none; }
+    .spec-icon { font-size: 20px; width: 36px; text-align: center; flex-shrink: 0; }
+    .spec-name { font-weight: 500; font-size: 14px; }
+    .spec-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    .hero-stat {
+      text-align: center;
+      padding: 16px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+    }
+    .hero-stat-val {
+      font-family: var(--font-display);
+      font-size: clamp(22px, 4vw, 36px);
+      font-weight: 800;
+      color: var(--accent);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .hero-stat-label { font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.4; }
+
+    /* ── HERO LAYOUT ── */
+    .hero-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: center;
+    }
+    @media (max-width: 860px) {
+      .hero-layout { grid-template-columns: 1fr; }
+      .hero-right  { display: none; }
+    }
+
+    /* ── DEVICE CARD HERO ── */
+    .hero-device-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-accent);
+    }
+    .hero-device-card::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(56,189,248,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hdc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .hdc-main { }
+    .hdc-big-val {
+      font-family: var(--font-display);
+      font-size: 56px;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+    }
+  </style>
+  <!-- PWA -->
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#38bdf8">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SkyGuard">
+  <link rel="apple-touch-icon" href="../icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="../icons/icon-192x192.png">
+</head>
+<body>
+  <div id="sidebar-root"></div>
+
+  <div class="app-layout">
+    <div class="main-content">
+      <div class="topbar">
+        <div class="topbar-title">Início</div>
+        <div class="topbar-actions">
+          <a href="devices.html" class="btn btn-primary btn-sm">Ver Dispositivos →</a>
+        </div>
+      </div>
+
+      <!-- HERO -->
+      <div class="section hero-section" style="background: radial-gradient(ellipse 70% 60% at 70% 40%, rgba(56,189,248,0.07) 0%, transparent 70%); padding-top: 70px;">
+        <div class="hero-layout">
+
+          <!-- COLUNA ESQUERDA: texto + stats -->
+          <div class="hero-left">
+            <div class="section-label">🌬️ Tecnologia de Qualidade do Ar</div>
+            <h1 class="section-title">
+              Respire com <span style="color:var(--accent);">Confiança</span>.<br>
+              Monitore com Precisão.
+            </h1>
+            <p class="section-desc">
+              SkyGuard é uma plataforma inteligente de monitoramento da qualidade do ar em tempo real,
+              combinando sensores SGP30 de alta precisão com conectividade ESP32 e comunicação MQTT para
+              manter ambientes seguros e saudáveis.
+            </p>
+            <div style="display:flex;gap:12px;margin-top:28px;flex-wrap:wrap;">
+              <a href="devices.html" class="btn btn-primary">📡 Ver Dispositivos</a>
+              <a href="dashboard.html" class="btn btn-secondary">📊 Dashboard</a>
+            </div>
+
+            <!-- STATS -->
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:40px;max-width:380px;">
+              <div class="hero-stat">
+                <div class="hero-stat-val">99.9%</div>
+                <div class="hero-stat-label">Uptime dos Sensores</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-val">4s</div>
+                <div class="hero-stat-label">Intervalo de Leitura</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-val">SGP30</div>
+                <div class="hero-stat-label">Sensor de Alta Precisão</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-val">MQTT</div>
+                <div class="hero-stat-label">Protocolo IoT</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- COLUNA DIREITA: painel temático ao vivo -->
+          <div class="hero-right">
+            <div class="hero-device-card">
+              <!-- Cabeçalho do card -->
+              <div class="hdc-header">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div class="live-dot" style="width:7px;height:7px;border-radius:50%;background:var(--success);animation:live-pulse 1.5s infinite;"></div>
+                  <span style="font-size:12px;font-weight:600;color:var(--text-secondary);letter-spacing:1px;text-transform:uppercase;">Ao Vivo</span>
+                </div>
+                <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-display);">SGP-001</span>
+              </div>
+
+              <!-- Leitura CO₂ principal -->
+              <div class="hdc-main">
+                <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);margin-bottom:6px;">CO₂ — Dióxido de Carbono</div>
+                <div style="display:flex;align-items:flex-end;gap:8px;">
+                  <div class="hdc-big-val" id="hero-co2">412</div>
+                  <div style="font-size:16px;color:var(--text-muted);margin-bottom:10px;">ppm</div>
+                </div>
+                <div class="quality-bar-track" style="margin-top:8px;">
+                  <div class="quality-bar-fill good" id="hero-co2-bar" style="width:41%;transition:width 1s ease;"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:4px;">
+                  <span>Normal</span><span>Elevado</span><span>Crítico</span>
+                </div>
+              </div>
+
+              <!-- Divider -->
+              <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+
+              <!-- TVOC -->
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="font-size:12px;color:var(--text-secondary);">TVOC</span>
+                <span style="font-family:var(--font-display);font-weight:700;font-size:18px;color:var(--success);" id="hero-tvoc">45 <span style="font-size:11px;font-weight:400;color:var(--text-muted);">ppb</span></span>
+              </div>
+              <div class="quality-bar-track" style="height:4px;">
+                <div class="quality-bar-fill good" id="hero-tvoc-bar" style="width:15%;background:var(--success);transition:width 1s ease;"></div>
+              </div>
+
+              <!-- Divider -->
+              <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+
+              <!-- IAQ e status -->
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                  <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Qualidade do Ar</div>
+                  <div style="font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--success);margin-top:2px;" id="hero-aqi-label">Boa</div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Última Leitura</div>
+                  <div style="font-size:13px;color:var(--text-secondary);margin-top:2px;" id="hero-ts">—</div>
+                </div>
+              </div>
+
+              <!-- Mini-gráfico de pontos (sparkline) -->
+              <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+                <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Histórico recente</div>
+                <canvas id="hero-sparkline" style="width:100%;height:48px;display:block;"></canvas>
+              </div>
+
+              <!-- Rodapé -->
+              <div style="margin-top:14px;display:flex;gap:6px;flex-wrap:wrap;">
+                <span class="status-badge online" style="font-size:10px;">✓ ESP32</span>
+                <span class="status-badge online" style="font-size:10px;">✓ SGP30</span>
+                <span class="status-badge online" style="font-size:10px;">✓ MQTT</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- COMO FUNCIONA -->
+      <div class="section" style="background: var(--bg-card);border-top:1px solid var(--border);">
+        <div class="section-label">⚙️ Tecnologia</div>
+        <div class="section-title">Como o SkyGuard Funciona</div>
+        <p class="section-desc" style="margin-bottom:36px;">Arquitetura simples, robusta e escalável para ambientes acadêmicos, industriais e comerciais.</p>
+
+        <div class="grid-3">
+          <div class="feature-card fade-up">
+            <div class="feature-icon">🔬</div>
+            <div class="feature-title">Sensor SGP30</div>
+            <div class="feature-desc">O SGP30 é um sensor de gás digital que mede CO₂ equivalente (eCO₂) e TVOC com alta precisão. Utiliza tecnologia MOX para detecção química.</div>
+          </div>
+          <div class="feature-card fade-up delay-1">
+            <div class="feature-icon">📶</div>
+            <div class="feature-title">ESP32 + Wi-Fi</div>
+            <div class="feature-desc">O microcontrolador ESP32 coleta os dados do sensor e os publica via protocolo MQTT em um broker, enviando leituras a cada 4 segundos.</div>
+          </div>
+          <div class="feature-card fade-up delay-2">
+            <div class="feature-icon">☁️</div>
+            <div class="feature-title">MQTT Broker</div>
+            <div class="feature-desc">Protocolo leve ideal para IoT. Os dados são publicados em tópicos como <code style="color:var(--accent);">skyguard/SGP-001/data</code> e recebidos pelo servidor em tempo real.</div>
+          </div>
+          <div class="feature-card fade-up">
+            <div class="feature-icon">🗄️</div>
+            <div class="feature-title">PHP + MySQL</div>
+            <div class="feature-desc">O backend em PHP recebe os dados MQTT, os armazena no banco MySQL (phpMyAdmin) e os disponibiliza para a interface web via API REST.</div>
+          </div>
+          <div class="feature-card fade-up delay-1">
+            <div class="feature-icon">📊</div>
+            <div class="feature-title">Dashboard Web</div>
+            <div class="feature-desc">Interface web responsiva que exibe as leituras em tempo real, histórico de medições, alertas e status dos dispositivos cadastrados.</div>
+          </div>
+          <div class="feature-card fade-up delay-2">
+            <div class="feature-icon">🔔</div>
+            <div class="feature-title">Alertas Inteligentes</div>
+            <div class="feature-desc">Notificações automáticas quando CO₂ ou TVOC ultrapassam limites configurados, auxiliando na tomada de decisão imediata.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ESPECIFICAÇÕES -->
+      <div class="section">
+        <div class="grid-2">
+          <div>
+            <div class="section-label">📋 Especificações</div>
+            <div class="section-title" style="font-size:26px;">Dados Técnicos do Sistema</div>
+            <p class="section-desc" style="margin-bottom:28px;">Parâmetros monitorados e limites recomendados pela OMS e ASHRAE.</p>
+
+            <div class="card">
+              <div class="spec-row">
+                <div class="spec-icon">💨</div>
+                <div>
+                  <div class="spec-name">CO₂ — Dióxido de Carbono</div>
+                  <div class="spec-desc">Normal: &lt; 600 ppm · Elevado: 600–1000 ppm · Crítico: &gt; 1000 ppm</div>
+                </div>
+              </div>
+              <div class="spec-row">
+                <div class="spec-icon">🧪</div>
+                <div>
+                  <div class="spec-name">TVOC — Compostos Orgânicos Voláteis</div>
+                  <div class="spec-desc">Normal: &lt; 100 ppb · Moderado: 100–300 ppb · Crítico: &gt; 300 ppb</div>
+                </div>
+              </div>
+              <div class="spec-row">
+                <div class="spec-icon">📡</div>
+                <div>
+                  <div class="spec-name">Protocolo de Comunicação</div>
+                  <div class="spec-desc">MQTT v3.1.1 · Broker: broker.emqx.io · Porta: 1883</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-label">🏢 Sobre a Empresa</div>
+            <div class="section-title" style="font-size:26px;">SkyGuard</div>
+            <p style="color:var(--text-secondary);font-size:15px;line-height:1.75;margin-bottom:20px;">
+              A <strong style="color:var(--text-primary);">SkyGuard</strong> nasceu da necessidade de tornar o monitoramento da qualidade do ar acessível,
+              inteligente e em tempo real. Nossa plataforma integra hardware de baixo custo com software
+              profissional para oferecer soluções completas para escolas, laboratórios e empresas.
+            </p>
+            <p style="color:var(--text-secondary);font-size:15px;line-height:1.75;margin-bottom:28px;">
+              Desenvolvido como projeto de <strong style="color:var(--accent);">Trabalho de Conclusão de Curso (TCC)</strong>,
+              o sistema demonstra como tecnologias IoT podem ser aplicadas para resolver problemas reais
+              de saúde e bem-estar em ambientes fechados.
+            </p>
+
+            <div style="display:flex;flex-wrap:wrap;gap:10px;">
+              <span class="status-badge online">✓ IoT</span>
+              <span class="status-badge online">✓ MQTT</span>
+              <span class="status-badge online">✓ ESP32</span>
+              <span class="status-badge online">✓ SGP30</span>
+              <span class="status-badge online">✓ PHP + MySQL</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="../js/nav.js"></script>
+  <script>
+    getUser();
+    renderNav('home');
+
+    // ── HERO CARD ANIMAÇÃO ────────────────────────────────────────────────────
+    const heroBase = { co2: 412, tvoc: 45 };
+    const sparkData = [];
+    let sparkChart = null;
+
+    function heroTick() {
+      // Simula leitura ao vivo com variação
+      const co2  = heroBase.co2  + Math.floor((Math.random() - 0.5) * 40);
+      const tvoc = heroBase.tvoc + Math.floor((Math.random() - 0.5) * 20);
+
+      // Atualiza valores
+      document.getElementById('hero-co2').textContent  = co2;
+      document.getElementById('hero-tvoc').innerHTML   = tvoc + ' <span style="font-size:11px;font-weight:400;color:var(--text-muted);">ppb</span>';
+      document.getElementById('hero-ts').textContent   = new Date().toLocaleTimeString('pt-BR');
+
+      // Barra CO₂ (0-1000 ppm escala)
+      const co2Pct = Math.min((co2 / 1000) * 100, 100).toFixed(1);
+      const co2Bar = document.getElementById('hero-co2-bar');
+      co2Bar.style.width = co2Pct + '%';
+      co2Bar.className   = 'quality-bar-fill ' + (co2 < 600 ? 'good' : co2 < 1000 ? 'moderate' : 'poor');
+
+      // Barra TVOC (0-300 ppb escala)
+      const tvocPct = Math.min((tvoc / 300) * 100, 100).toFixed(1);
+      const tvocBar = document.getElementById('hero-tvoc-bar');
+      tvocBar.style.width = tvocPct + '%';
+      tvocBar.style.background = tvoc < 100 ? 'var(--success)' : tvoc < 300 ? 'var(--warning)' : 'var(--danger)';
+
+      // Label IAQ
+      const aqiEl    = document.getElementById('hero-aqi-label');
+      const iaq      = Math.round(Math.max(0, 100 - ((co2-400)/600)*60));
+      aqiEl.textContent = iaq >= 80 ? 'Boa' : iaq >= 50 ? 'Moderada' : 'Ruim';
+      aqiEl.style.color = iaq >= 80 ? 'var(--success)' : iaq >= 50 ? 'var(--warning)' : 'var(--danger)';
+
+      // Sparkline
+      sparkData.push(co2);
+      if (sparkData.length > 20) sparkData.shift();
+      drawSparkline();
+    }
+
+    function drawSparkline() {
+      const canvas = document.getElementById('hero-sparkline');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width  = canvas.offsetWidth  * dpr;
+      canvas.height = canvas.offsetHeight * dpr;
+      ctx.scale(dpr, dpr);
+      const W = canvas.offsetWidth, H = canvas.offsetHeight;
+      ctx.clearRect(0, 0, W, H);
+      if (sparkData.length < 2) return;
+
+      const min = Math.min(...sparkData) - 20;
+      const max = Math.max(...sparkData) + 20;
+      const toX = i => (i / (sparkData.length - 1)) * W;
+      const toY = v => H - ((v - min) / (max - min)) * H;
+
+      // Área preenchida
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, 'rgba(56,189,248,0.25)');
+      grad.addColorStop(1, 'rgba(56,189,248,0.02)');
+
+      ctx.beginPath();
+      sparkData.forEach((v, i) => i === 0 ? ctx.moveTo(toX(i), toY(v)) : ctx.lineTo(toX(i), toY(v)));
+      ctx.lineTo(toX(sparkData.length - 1), H);
+      ctx.lineTo(0, H);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Linha
+      ctx.beginPath();
+      sparkData.forEach((v, i) => i === 0 ? ctx.moveTo(toX(i), toY(v)) : ctx.lineTo(toX(i), toY(v)));
+      ctx.strokeStyle = 'rgba(56,189,248,0.85)';
+      ctx.lineWidth = 1.5;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+
+      // Ponto final
+      const lx = toX(sparkData.length - 1);
+      const ly = toY(sparkData[sparkData.length - 1]);
+      ctx.beginPath();
+      ctx.arc(lx, ly, 3, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(56,189,248,1)';
+      ctx.fill();
+    }
+
+    // Inicia com alguns pontos para não começar vazio
+    for (let i = 0; i < 8; i++) {
+      sparkData.push(heroBase.co2 + Math.floor((Math.random() - 0.5) * 40));
+    }
+
+    heroTick();
+    setInterval(heroTick, 4000);
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        // Detecta automaticamente o caminho base do site
+        const swPath = document.querySelector('link[rel="manifest"]').href
+          .replace('manifest.json', 'sw.js');
+        navigator.serviceWorker.register(swPath, { scope: './' })
+          .then(reg => {
+            reg.addEventListener("updatefound", () => {
+              const newSW = reg.installing;
+              newSW.addEventListener("statechange", () => {
+                if (newSW.state === "installed" && navigator.serviceWorker.controller) {
+                  newSW.postMessage({ action: "skipWaiting" });
+                }
+              });
+            });
+          })
+          .catch(err => console.warn("[SW] Falha ao registrar:", err));
+      });
+    }
+  </script>
+</body>
+</html>
