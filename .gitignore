@@ -12,3 +12,4 @@ vendor/
 
 # Windows
 Thumbs.db
+docker/ssl/
