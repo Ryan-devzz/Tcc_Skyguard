@@ -1,10 +1,10 @@
-# ── Build Stage ──────────────────────────────────────────────────────────────
-FROM php:8.2-apache AS base
+FROM php:8.2-apache
 
-# Extensões necessárias para MySQL + PHPMailer (openssl, mbstring)
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libssl-dev \
         libonig-dev \
+        unzip \
+        curl \
     && docker-php-ext-install \
         mysqli \
         pdo_mysql \
@@ -14,18 +14,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         mbstring \
     && rm -rf /var/lib/apt/lists/*
 
-# Habilita mod_rewrite para URLs limpas (Apache)
-RUN a2enmod rewrite headers
+RUN a2enmod rewrite headers ssl
+RUN mkdir -p /etc/apache2/ssl
 
-# Configuração Apache: DocumentRoot, AllowOverride e headers de segurança
+# Instala o Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
 COPY docker/apache.conf /etc/apache2/sites-available/000-default.conf
+COPY docker/ssl/skyguard.crt /etc/apache2/ssl/skyguard.crt
+COPY docker/ssl/skyguard.key /etc/apache2/ssl/skyguard.key
 
-# Copia a aplicação
 COPY app/ /var/www/html/
 
-# Permissões corretas
+# Instala dependências PHP (PHPMailer)
+RUN cd /var/www/html && composer require phpmailer/phpmailer --no-interaction
+
 RUN chown -R www-data:www-data /var/www/html \
     && find /var/www/html -type d -exec chmod 755 {} \; \
     && find /var/www/html -type f -exec chmod 644 {} \;
 
-EXPOSE 80
+EXPOSE 80 443

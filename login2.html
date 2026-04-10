@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkyGuard — Login</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .login-page { flex-direction: column; }
+    .particles {
+      position: absolute; inset: 0;
+      overflow: hidden;
+    }
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0.06;
+      animation: drift linear infinite;
+    }
+    @keyframes drift {
+      from { transform: translateY(100vh) translateX(-20px); opacity: 0.06; }
+      to { transform: translateY(-100px) translateX(20px); opacity: 0; }
+    }
+    .error-msg {
+      background: rgba(248,113,113,0.1);
+      border: 1px solid rgba(248,113,113,0.25);
+      color: var(--danger);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 14px;
+      display: none;
+    }
+    .footer-note {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .password-wrap { position: relative; }
+    .toggle-pw {
+      position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 16px;
+    }
+  </style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#38bdf8">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SkyGuard">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-bg"></div>
+    <div class="particles" id="particles"></div>
+
+    <div class="login-card fade-up">
+      <div class="login-logo">
+        <div class="login-logo-icon"><img src="logo.jpg" alt="SkyGuard"></div>
+        <div class="login-title">SkyGuard</div>
+        <div class="login-subtitle">Monitoramento Inteligente da Qualidade do Ar</div>
+      </div>
+
+      <div class="error-msg" id="errorMsg">⚠️ Usuário ou senha incorretos.</div>
+
+      <div class="form-group">
+        <label class="form-label">E-mail</label>
+        <input type="email" class="form-control" id="email" placeholder="seuemail@exemplo.com" autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Senha</label>
+        <div class="password-wrap">
+          <input type="password" class="form-control" id="password" placeholder="••••••••" autocomplete="current-password">
+          <button class="toggle-pw" onclick="togglePw()" type="button">👁</button>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%; margin-top:8px; padding:13px;" onclick="doLogin()">
+        Entrar na Plataforma
+      </button>
+
+      <div class="footer-note">
+        Acesso restrito · SkyGuard © 2025<br>
+        <span style="color: var(--accent);">admin@skyguard.com</span> / admin123 &nbsp;|&nbsp;
+        <span style="color: var(--text-secondary);">user@skyguard.com</span> / user123
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Partículas decorativas
+    const container = document.getElementById('particles');
+    for (let i = 0; i < 18; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      const size = Math.random() * 12 + 4;
+      p.style.cssText = `
+        width: ${size}px; height: ${size}px;
+        left: ${Math.random() * 100}%;
+        animation-duration: ${Math.random() * 15 + 10}s;
+        animation-delay: ${Math.random() * 10}s;
+      `;
+      container.appendChild(p);
+    }
+
+    function togglePw() {
+      const pw = document.getElementById('password');
+      pw.type = pw.type === 'password' ? 'text' : 'password';
+    }
+
+    // Simulação de login — em produção, substituir por fetch() ao PHP
+    const users = {
+      'admin@skyguard.com': { password: 'admin123', role: 'admin', name: 'Admin' },
+      'user@skyguard.com': { password: 'user123', role: 'user', name: 'João Silva' }
+    };
+
+    function doLogin() {
+      const email = document.getElementById('email').value.trim();
+      const pass = document.getElementById('password').value;
+      const errEl = document.getElementById('errorMsg');
+
+      if (users[email] && users[email].password === pass) {
+        sessionStorage.setItem('sg_user', JSON.stringify({ email, ...users[email] }));
+        window.location.href = 'shboard.html';
+      } else {
+        errEl.style.display = 'block';
+        setTimeout(() => errEl.style.display = 'none', 3500);
+      }
+    }
+
+    document.addEventListener('keypress', e => { if (e.key === 'Enter') doLogin(); });
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js")
+          .then(reg => {
+            console.log("[SW] Registrado:", reg.scope);
+            reg.addEventListener("updatefound", () => {
+              const newSW = reg.installing;
+              newSW.addEventListener("statechange", () => {
+                if (newSW.state === "installed" && navigator.serviceWorker.controller) {
+                  newSW.postMessage({ action: "skipWaiting" });
+                }
+              });
+            });
+          })
+          .catch(err => console.warn("[SW] Falha ao registrar:", err));
+      });
+    }
+  </script>
+</body>
+</html>

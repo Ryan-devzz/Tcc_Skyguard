@@ -1,10 +1,4 @@
 #!/bin/bash
-# ============================================================
-#  SKYGUARD — Script de instalação automática
-#  Execute na VM Azure com:
-#    bash setup.sh
-# ============================================================
-
 set -e
 
 RED='\033[0;31m'
@@ -23,15 +17,12 @@ section() { echo -e "\n${CYAN}${BOLD}══════════════�
             echo -e "${CYAN}${BOLD}  $1${NC}"; \
             echo -e "${CYAN}${BOLD}══════════════════════════════════════${NC}\n"; }
 
-# FIX 1: Resolve caminho absoluto do script para o exec sg funcionar
 SCRIPT_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+PROJETO_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Detecta IP público da VM
 MINHA_IP=$(curl -s --max-time 5 https://api.ipify.org 2>/dev/null || \
            curl -s --max-time 5 http://ifconfig.me 2>/dev/null || \
            hostname -I | awk '{print $1}')
-
-PROJETO_DIR="$HOME/skyguard-docker"
 
 echo ""
 echo -e "${BOLD}╔══════════════════════════════════════════╗${NC}"
@@ -39,28 +30,22 @@ echo -e "${BOLD}║        SKYGUARD — Setup Automático       ║${NC}"
 echo -e "${BOLD}╚══════════════════════════════════════════╝${NC}"
 echo ""
 info "IP detectado: ${BOLD}$MINHA_IP${NC}"
+info "Pasta do projeto: ${BOLD}$PROJETO_DIR${NC}"
 echo ""
 
-# ============================================================
 section "ETAPA 1 — Limpeza de espaço"
-# ============================================================
 
 info "Verificando espaço em disco..."
 df -h / | tail -1
 
-# FIX 2: Instala unzip e curl que podem não estar no Ubuntu mínimo
-info "Garantindo dependências básicas (unzip, curl)..."
+info "Garantindo dependências básicas (curl, openssl)..."
 sudo apt-get update -qq
-sudo apt-get install -y -qq unzip curl
+sudo apt-get install -y -qq curl openssl
 
 info "Removendo pacotes desnecessários..."
 sudo apt-get autoremove -y -qq 2>/dev/null || true
 sudo apt-get autoclean -qq 2>/dev/null || true
-
-info "Limpando logs antigos do sistema..."
 sudo journalctl --vacuum-size=50M 2>/dev/null || true
-
-info "Limpando /tmp..."
 sudo rm -rf /tmp/* 2>/dev/null || true
 
 if command -v docker &>/dev/null; then
@@ -71,71 +56,41 @@ fi
 log "Espaço após limpeza:"
 df -h / | tail -1
 
-# ============================================================
 section "ETAPA 2 — Instalação do Docker"
-# ============================================================
 
 if command -v docker &>/dev/null; then
-    log "Docker já está instalado: $(docker --version)"
+    log "Docker já instalado: $(docker --version)"
 else
     info "Instalando Docker..."
     curl -fsSL https://get.docker.com | sudo sh
     sudo usermod -aG docker "$USER"
-    log "Docker instalado com sucesso"
+    log "Docker instalado"
 fi
 
 if docker compose version &>/dev/null 2>&1; then
-    log "Docker Compose já disponível: $(docker compose version)"
+    log "Docker Compose disponível: $(docker compose version)"
 else
     info "Instalando Docker Compose plugin..."
     sudo apt-get install -y -qq docker-compose-plugin
     log "Docker Compose instalado"
 fi
 
-# FIX 2: Usa caminho absoluto no exec sg para não quebrar
 if ! docker ps &>/dev/null; then
-    warn "Aplicando permissões Docker (requer re-execução do script)..."
+    warn "Aplicando permissões Docker (requer re-execução)..."
     sudo usermod -aG docker "$USER"
     exec sg docker "$SCRIPT_PATH"
 fi
 
 log "Docker funcionando corretamente"
 
-# ============================================================
-section "ETAPA 3 — Preparando o projeto"
-# ============================================================
+section "ETAPA 3 — Projeto encontrado via Git"
 
-ZIP_PATH=""
-for f in "$HOME/skyguard-docker.zip" "$(dirname "$SCRIPT_PATH")/skyguard-docker.zip" "$(pwd)/skyguard-docker.zip"; do
-    if [ -f "$f" ]; then
-        ZIP_PATH="$f"
-        break
-    fi
-done
-
-if [ -z "$ZIP_PATH" ]; then
-    error "Arquivo skyguard-docker.zip não encontrado.\nEnvie o zip para a VM antes de rodar este script:\n  scp skyguard-docker.zip azureuser@<IP>:~/"
-fi
-
-info "Zip encontrado: $ZIP_PATH"
-
-if [ -d "$PROJETO_DIR" ]; then
-    warn "Pasta $PROJETO_DIR já existe. Fazendo backup..."
-    mv "$PROJETO_DIR" "${PROJETO_DIR}_backup_$(date +%Y%m%d_%H%M%S)"
-fi
-
-info "Extraindo projeto..."
-cd "$HOME"
-unzip -q "$ZIP_PATH"
 cd "$PROJETO_DIR"
-log "Projeto extraído em $PROJETO_DIR"
+log "Usando projeto em: $PROJETO_DIR"
 
-# ============================================================
 section "ETAPA 4 — Configurando SSL (HTTPS)"
-# ============================================================
 
-info "Gerando certificado SSL autoassinado para IP: $MINHA_IP"
-
+info "Gerando certificado SSL para IP: $MINHA_IP"
 mkdir -p docker/ssl
 
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
@@ -146,16 +101,13 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 
 log "Certificado SSL gerado"
 
-# Reescreve apache.conf com HTTP redirect + HTTPS
 cat > docker/apache.conf << EOF
-# HTTP -> redireciona para HTTPS
 <VirtualHost *:80>
     ServerName ${MINHA_IP}
     RewriteEngine On
     RewriteRule ^(.*)$ https://%{HTTP_HOST}\$1 [R=301,L]
 </VirtualHost>
 
-# HTTPS
 <VirtualHost *:443>
     ServerAdmin webmaster@localhost
     DocumentRoot /var/www/html
@@ -168,7 +120,6 @@ cat > docker/apache.conf << EOF
         Options -Indexes +FollowSymLinks
         AllowOverride All
         Require all granted
-
         <FilesMatch "\.(env|sql|lock|md)$">
             Require all denied
         </FilesMatch>
@@ -188,7 +139,6 @@ EOF
 
 log "apache.conf configurado"
 
-# Reescreve Dockerfile com SSL
 cat > Dockerfile << 'DOCKERFILE'
 FROM php:8.2-apache
 
@@ -205,7 +155,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN a2enmod rewrite headers ssl
-
 RUN mkdir -p /etc/apache2/ssl
 
 COPY docker/apache.conf /etc/apache2/sites-available/000-default.conf
@@ -221,10 +170,8 @@ RUN chown -R www-data:www-data /var/www/html \
 EXPOSE 80 443
 DOCKERFILE
 
-log "Dockerfile atualizado com SSL"
+log "Dockerfile atualizado"
 
-# Reescreve docker-compose.yml com porta 443
-# FIX 3: start_period aumentado para 60s e retries para 15 (MySQL demora no primeiro boot)
 cat > docker-compose.yml << 'COMPOSE'
 version: '3.9'
 
@@ -305,9 +252,7 @@ COMPOSE
 
 log "docker-compose.yml atualizado"
 
-# Garante .env com single-quote heredoc (sem expansão de variáveis bash)
 cat > .env << 'ENVEOF'
-# SKYGUARD — Variáveis de Ambiente
 DB_ROOT_PASSWORD=SkyGuard@Root2025!
 DB_NAME=skyguard_db
 DB_USER=skyuser
@@ -326,24 +271,21 @@ ENVEOF
 
 log ".env configurado"
 
-# ============================================================
 section "ETAPA 5 — Subindo os containers"
-# ============================================================
 
-info "Fazendo build da imagem (pode demorar 1-2 minutos)..."
+info "Fazendo build da imagem..."
 docker compose build --no-cache
 
 info "Iniciando containers..."
 docker compose up -d
 
-# FIX 3: Aguarda o banco ficar HEALTHY de verdade em vez de sleep fixo
-info "Aguardando banco de dados inicializar (pode levar até 2 minutos na primeira vez)..."
+info "Aguardando banco de dados inicializar..."
 TENTATIVAS=0
 MAX_TENTATIVAS=36
 until [ "$(docker inspect --format='{{.State.Health.Status}}' skyguard_db 2>/dev/null)" = "healthy" ]; do
     TENTATIVAS=$((TENTATIVAS + 1))
     if [ $TENTATIVAS -ge $MAX_TENTATIVAS ]; then
-        warn "Banco demorou mais que o esperado. Verificando logs..."
+        warn "Banco demorou mais que o esperado. Logs:"
         docker compose logs db --tail=15
         break
     fi
@@ -356,11 +298,8 @@ log "Banco de dados pronto!"
 info "Status dos containers:"
 docker compose ps
 
-# ============================================================
 section "ETAPA 6 — Verificação final"
-# ============================================================
 
-# Testa HTTPS
 HTTP_CODE=$(curl -sk -o /dev/null -w "%{http_code}" "https://localhost/login.html" 2>/dev/null || echo "000")
 if [ "$HTTP_CODE" = "200" ]; then
     log "Site HTTPS respondendo corretamente (HTTP $HTTP_CODE)"
@@ -369,57 +308,33 @@ else
     sleep 15
     HTTP_CODE=$(curl -sk -o /dev/null -w "%{http_code}" "https://localhost/login.html" 2>/dev/null || echo "000")
     if [ "$HTTP_CODE" = "200" ]; then
-        log "Site respondendo na segunda tentativa (HTTP $HTTP_CODE)"
+        log "Site OK na segunda tentativa (HTTP $HTTP_CODE)"
     else
-        warn "Problema detectado. Logs do app:"
+        warn "Logs do app:"
         docker compose logs app --tail=25
     fi
 fi
 
-# Testa redirect HTTP -> HTTPS
 REDIRECT_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost/login.html" 2>/dev/null || echo "000")
 if [ "$REDIRECT_CODE" = "301" ] || [ "$REDIRECT_CODE" = "302" ]; then
-    log "Redirecionamento HTTP → HTTPS funcionando (HTTP $REDIRECT_CODE)"
+    log "Redirecionamento HTTP -> HTTPS funcionando"
 else
-    warn "Redirecionamento HTTP retornou $REDIRECT_CODE (esperado 301)"
+    warn "Redirect retornou $REDIRECT_CODE (esperado 301)"
 fi
 
-# Status do banco
 DB_STATUS=$(docker inspect --format='{{.State.Health.Status}}' skyguard_db 2>/dev/null || echo "unknown")
-if [ "$DB_STATUS" = "healthy" ]; then
-    log "Banco de dados saudável"
-else
-    warn "Status do banco: $DB_STATUS — verifique com: docker compose logs db"
-fi
+[ "$DB_STATUS" = "healthy" ] && log "Banco saudavel" || warn "Status do banco: $DB_STATUS"
 
-# ============================================================
 section "INSTALACAO CONCLUIDA"
-# ============================================================
 
 echo ""
-echo -e "${BOLD}  Acesse o SkyGuard:${NC}"
-echo -e "  ${GREEN}https://${MINHA_IP}/login.html${NC}"
+echo -e "  ${GREEN}Site: https://${MINHA_IP}/login.html${NC}"
+echo -e "  ${GREEN}phpMyAdmin: http://${MINHA_IP}:8080${NC}"
 echo ""
-echo -e "${BOLD}  phpMyAdmin:${NC}"
-echo -e "  ${GREEN}http://${MINHA_IP}:8080${NC}"
-echo ""
-echo -e "${BOLD}  Logins padrao:${NC}"
 echo -e "  Admin : admin@skyguard.com  /  admin123"
 echo -e "  User  : user@skyguard.com   /  user123"
 echo ""
-echo -e "${YELLOW}  ATENCAO: Ao abrir no navegador, clique em${NC}"
-echo -e "${YELLOW}  'Avancado -> Continuar para o site'${NC}"
-echo -e "${YELLOW}  (certificado autoassinado - normal para TCC)${NC}"
+echo -e "${YELLOW}  No navegador: Avancado -> Continuar para o site${NC}"
 echo ""
-echo -e "${BOLD}  Portas que devem estar abertas no Azure NSG:${NC}"
-echo -e "  22   -> SSH"
-echo -e "  80   -> HTTP  (redireciona para HTTPS)"
-echo -e "  443  -> HTTPS (site principal)"
-echo -e "  8080 -> phpMyAdmin"
-echo ""
-echo -e "${BOLD}  Comandos uteis:${NC}"
-echo -e "  docker compose logs -f        # logs em tempo real"
-echo -e "  docker compose ps             # status dos containers"
-echo -e "  docker compose restart app    # reiniciar aplicacao"
-echo -e "  docker compose down           # parar tudo"
+echo -e "  Portas para abrir no Azure NSG: 80, 443, 8080"
 echo ""
