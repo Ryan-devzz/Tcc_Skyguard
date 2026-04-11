@@ -127,11 +127,10 @@
     const user = getUser();
     renderNav('dashboard');
 
-    const devices = [
-      { id: 'SGP-001', name: 'Sala Principal', location: 'Térreo — Bloco A' },
-      { id: 'SGP-002', name: 'Lab. Química', location: '1º Andar — Bloco B' },
-      { id: 'SGP-003', name: 'Corredor Norte', location: 'Térreo — Bloco C' },
-    ];
+    let devices = [];
+    fetch('../api/devices.php', { credentials: 'same-origin' })
+      .then(r => r.json())
+      .then(data => { devices = Array.isArray(data) ? data : []; updateDashboard(); });
 
     function updateDashboard() {
       let totalCO2 = 0, totalTVOC = 0, onlineCount = 0;

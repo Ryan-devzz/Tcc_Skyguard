@@ -55,11 +55,12 @@
         `<a href="devices-admin.html" class="btn btn-primary">+ Gerenciar Dispositivos</a>`;
     }
 
-    const devices = [
-      { id: 'SGP-001', name: 'Sala Principal', location: 'Térreo — Bloco A', status: 'online' },
-      { id: 'SGP-002', name: 'Lab. Química', location: '1º Andar — Bloco B', status: 'online' },
-      { id: 'SGP-003', name: 'Corredor Norte', location: 'Térreo — Bloco C', status: 'online' },
-    ];
+    let devices = [];
+    (async () => {
+      const res = await fetch('../api/devices.php', { credentials: 'same-origin' });
+      devices = await res.json();
+      renderDevices();
+    })();
 
     function toggleDevice(event, devId) {
       event.stopPropagation(); // Não navegar para detalhe ao clicar no botão
