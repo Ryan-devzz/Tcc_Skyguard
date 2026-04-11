@@ -99,12 +99,9 @@ body {
 .logo-text {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 17px;
+  font-size: 20px;
   color: var(--text-primary);
   letter-spacing: 0.5px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .logo-sub {
@@ -931,76 +928,13 @@ option { background: var(--bg-panel); }
 
 /* ---- RESPONSIVE ---- */
 @media (max-width: 768px) {
-  /* Sidebar oculta por padrão no mobile */
-  .sidebar {
-    transform: translateX(-260px);
-    transition: transform 0.3s ease;
-    z-index: 300;
-  }
+  .sidebar { transform: translateX(-260px); }
   .sidebar.open { transform: translateX(0); }
-
-  /* Overlay escuro quando sidebar aberta */
-  .sidebar-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 299;
-  }
-  .sidebar-overlay.show { display: block; }
-
-  /* Conteúdo ocupa tela toda */
   .main-content { margin-left: 0; }
-
-  /* Topbar com botão hamburger */
-  .topbar {
-    padding: 0 16px;
-    position: sticky;
-    top: 0;
-    z-index: 101;
-  }
-  .topbar-title { font-size: 15px; }
-
-  /* Grids viram coluna única */
-  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .hero { padding: 80px 24px; }
   .hero-grid { grid-template-columns: 1fr; gap: 40px; }
-  .hero-layout { flex-direction: column; }
-  .hero { padding: 40px 16px; }
-  .page { padding: 16px; }
-  .section { padding: 16px; }
-
-  /* Cards e tabelas */
-  .card { padding: 16px; }
-  .table-wrap { overflow-x: auto; }
-  table { min-width: 500px; }
-
-  /* Botões menores */
-  .btn { padding: 8px 14px; font-size: 13px; }
-
-  /* Stats cards em 2 colunas */
-  .stats-grid { grid-template-columns: 1fr 1fr; }
-
-  /* Profile */
-  .profile-grid { grid-template-columns: 1fr; }
-
-  /* Device cards */
-  .device-grid { grid-template-columns: 1fr; }
-
-  /* Form */
-  .form-row { flex-direction: column; }
-
-  /* Modal fullscreen no mobile */
-  .modal-box {
-    margin: 0 auto;
-  }
-}
-
-@media (max-width: 480px) {
-  .stats-grid { grid-template-columns: 1fr; }
-  .topbar-title { font-size: 14px; }
-  .logo-text { font-size: 15px; }
-  .card-title { font-size: 14px; }
-  .btn-sm { padding: 6px 10px; font-size: 12px; }
+  .page { padding: 20px; }
 }
 
 /* ---- ANIMATIONS ---- */

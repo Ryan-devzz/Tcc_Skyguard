@@ -19,20 +19,6 @@ function logout() {
 }
 
 // ---- RENDERIZAR SIDEBAR ----
-function toggleSidebar() {
-  const sidebar = document.querySelector(".sidebar");
-  const overlay = document.getElementById("sidebar-overlay");
-  if (sidebar) sidebar.classList.toggle("open");
-  if (overlay) overlay.classList.toggle("show");
-}
-
-function closeSidebar() {
-  const sidebar = document.querySelector(".sidebar");
-  const overlay = document.getElementById("sidebar-overlay");
-  if (sidebar) sidebar.classList.remove("open");
-  if (overlay) overlay.classList.remove("show");
-}
-
 function renderNav(activePage) {
   const user = getUser();
   if (!user) return;
@@ -81,9 +67,6 @@ function renderNav(activePage) {
         <a class="nav-item ${activePage === 'contact' ? 'active' : ''}" href="contact.html">
           <span class="nav-icon">✉️</span> Contato
         </a>
-        <a class="nav-item ${activePage === 'install' ? 'active' : ''}" href="/install.php" target="_blank">
-          <span class="nav-icon">📲</span> Instalar App
-        </a>
         <a class="nav-item ${activePage === 'profile' ? 'active' : ''}" href="profile.html">
           <span class="nav-icon">👤</span> Meu Perfil
         </a>
@@ -113,28 +96,6 @@ function renderNav(activePage) {
   const target = document.getElementById('sidebar-root');
   if (target) {
     target.innerHTML = html;
-
-  if (!document.querySelector(".sidebar-overlay")) {
-    const ov = document.createElement("div");
-    ov.className = "sidebar-overlay";
-    ov.id = "sidebar-overlay";
-    ov.onclick = closeSidebar;
-    document.body.appendChild(ov);
-  }
-
-  const topbar = document.querySelector(".topbar");
-  if (topbar && !document.getElementById("hamburger-btn")) {
-    const btn = document.createElement("button");
-    btn.id = "hamburger-btn";
-    btn.onclick = toggleSidebar;
-    btn.style.cssText = "background:none;border:none;cursor:pointer;padding:8px;display:none;flex-direction:column;gap:5px;margin-right:12px;";
-    btn.innerHTML = "<span style=\"display:block;width:22px;height:2px;background:var(--text-primary);border-radius:2px\"></span><span style=\"display:block;width:22px;height:2px;background:var(--text-primary);border-radius:2px\"></span><span style=\"display:block;width:22px;height:2px;background:var(--text-primary);border-radius:2px\"></span>";
-    topbar.insertBefore(btn, topbar.firstChild);
-    const mq = window.matchMedia("(max-width: 768px)");
-    const upd = function(e) { btn.style.display = e.matches ? "flex" : "none"; };
-    upd(mq);
-    mq.addListener(upd);
-  }
     // Atualiza o indicador MQTT com base nos dispositivos realmente online
     _updateMQTTStatus();
   }
