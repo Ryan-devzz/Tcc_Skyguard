@@ -18,7 +18,7 @@ $certUrl = "https://" . $ip . "/skyguard.crt";
     .sub { font-size: 12px; color: #64748b; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 40px; }
     .card { background: #0d1526; border: 1px solid #1e2d45; border-radius: 16px; padding: 32px; margin-bottom: 16px; }
     .card-title { font-size: 14px; font-weight: 600; color: #38bdf8; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; }
-    .qr-box { background: #fff; border-radius: 12px; padding: 16px; display: inline-block; margin-bottom: 16px; }
+    .qr-box { background: #fff; border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; width: fit-content; }
     .url { font-size: 13px; color: #64748b; word-break: break-all; margin-bottom: 20px; }
     .btn { display: block; width: 100%; padding: 14px; border-radius: 10px; font-size: 15px; font-weight: 600; text-decoration: none; margin-bottom: 12px; cursor: pointer; border: none; }
     .btn-primary { background: #38bdf8; color: #0a0f1a; }
