@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         mbstring \
     && rm -rf /var/lib/apt/lists/*
 
-RUN a2enmod rewrite headers ssl
+RUN a2enmod rewrite headers ssl && sed -i 's|Alias /icons/.*||g' /etc/apache2/mods-enabled/alias.conf
 RUN mkdir -p /etc/apache2/ssl
 
 # Instala o Composer
