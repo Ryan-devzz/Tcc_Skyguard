@@ -5,191 +5,242 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SkyGuard — Gerenciar Dispositivos</title>
   <link rel="stylesheet" href="../css/style.css">
-  <!-- PWA -->
-  <link rel="manifest" href="../manifest.json">
-  <meta name="theme-color" content="#38bdf8">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="SkyGuard">
-  <link rel="apple-touch-icon" href="../icons/icon-192x192.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="../icons/icon-192x192.png">
 </head>
 <body>
   <div id="sidebar-root"></div>
   <div class="app-layout">
     <div class="main-content">
       <div class="topbar">
-        <div class="topbar-title">Gerenciar Dispositivos</div>
-        <div class="topbar-actions">
-          <button class="btn btn-primary btn-sm" onclick="openModal('modalDevice')">+ Cadastrar Dispositivo</button>
-        </div>
+        <div class="topbar-title">⚙️ Gerenciar Dispositivos</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalNovoDevice()">+ Novo Dispositivo</button>
       </div>
 
-      <div class="page">
-        <div class="page-header">
-          <div class="page-title">Dispositivos Cadastrados</div>
-          <div class="page-subtitle">Gerencie os sensores SGP30/ESP32 conectados à plataforma</div>
-        </div>
+      <div class="section">
 
-        <div class="card">
+        <!-- LISTA DE DISPOSITIVOS -->
+        <div class="card mb-4">
+          <div class="card-title mb-4">📡 Dispositivos Cadastrados</div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
                   <th>ID</th>
                   <th>Nome</th>
-                  <th>Localização</th>
-                  <th>Tópico MQTT</th>
+                  <th>Local</th>
                   <th>Status</th>
+                  <th>Usuários</th>
                   <th>Ações</th>
                 </tr>
               </thead>
-              <tbody id="deviceTable"></tbody>
+              <tbody id="devicesTable">
+                <tr><td colspan="6" style="text-align:center;color:var(--text-muted)">Carregando...</td></tr>
+              </tbody>
             </table>
           </div>
         </div>
+
       </div>
     </div>
   </div>
 
-  <!-- MODAL -->
-  <div class="modal-overlay" id="modalDevice">
-    <div class="modal" style="max-width:560px;">
-      <div class="modal-header">
-        <div class="modal-title" id="devModalTitle">Cadastrar Dispositivo</div>
-        <button class="modal-close" onclick="closeModal('modalDevice')">✕</button>
+  <!-- MODAL NOVO DISPOSITIVO -->
+  <div id="modalDevice" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:32px;width:100%;max-width:440px;">
+      <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-bottom:20px;">➕ Novo Dispositivo</div>
+      <div class="form-group">
+        <label class="form-label">ID do Dispositivo</label>
+        <input id="inp-devid" class="form-input" placeholder="Ex: SGP-004">
       </div>
-      <input type="hidden" id="editDevIdx" value="-1">
-      <div class="grid-2">
-        <div class="form-group">
-          <label class="form-label">ID do Dispositivo</label>
-          <input type="text" class="form-control" id="d-id" placeholder="SGP-004">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Nome</label>
-          <input type="text" class="form-control" id="d-name" placeholder="Sala de Reuniões">
-        </div>
+      <div class="form-group">
+        <label class="form-label">Nome</label>
+        <input id="inp-devname" class="form-input" placeholder="Ex: Sala de Reuniões">
       </div>
       <div class="form-group">
         <label class="form-label">Localização</label>
-        <input type="text" class="form-control" id="d-location" placeholder="2º Andar — Bloco D">
+        <input id="inp-devloc" class="form-input" placeholder="Ex: 2º Andar — Bloco A">
       </div>
-      <div class="grid-2">
-        <div class="form-group">
-          <label class="form-label">Broker MQTT</label>
-          <input type="text" class="form-control" id="d-broker" value="broker.emqx.io">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Porta</label>
-          <input type="text" class="form-control" id="d-port" value="1883">
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Status</label>
-        <select class="form-control" id="d-status">
-          <option value="online">Online</option>
-          <option value="offline">Offline</option>
-        </select>
-      </div>
-      <div style="display:flex;gap:10px;margin-top:8px;">
-        <button class="btn btn-primary" onclick="saveDevice()" style="flex:1;">Salvar</button>
-        <button class="btn btn-secondary" onclick="closeModal('modalDevice')">Cancelar</button>
+      <div style="display:flex;gap:12px;margin-top:24px;">
+        <button class="btn btn-secondary" style="flex:1" onclick="fecharModalDevice()">Cancelar</button>
+        <button class="btn btn-primary" style="flex:1" onclick="salvarDevice()">Salvar</button>
       </div>
     </div>
   </div>
 
-  <div id="toast-container" class="toast-container"></div>
+  <!-- MODAL ATRIBUIR USUÁRIOS -->
+  <div id="modalAssign" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:32px;width:100%;max-width:500px;">
+      <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">👥 Atribuir Usuários</div>
+      <div id="assign-devname" style="font-size:13px;color:var(--accent);margin-bottom:20px;"></div>
+
+      <div class="form-group">
+        <label class="form-label">Adicionar usuário</label>
+        <div style="display:flex;gap:8px;">
+          <select id="sel-user" class="form-input" style="flex:1"></select>
+          <button class="btn btn-primary" onclick="atribuirUsuario()">Adicionar</button>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">USUÁRIOS COM ACESSO</div>
+        <div id="assigned-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+      <div style="margin-top:24px;">
+        <button class="btn btn-secondary" style="width:100%" onclick="fecharModalAssign()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <script src="../js/nav.js"></script>
   <script>
     const user = getUser();
-    if (user.role !== 'admin') { window.location.href = 'dashboard.html'; }
+    if (!user || user.role !== 'admin') window.location.href = 'dashboard.html';
     renderNav('devices-admin');
 
-    let devices = [
-      { id: 'SGP-001', name: 'Sala Principal', location: 'Térreo — Bloco A', broker: 'broker.emqx.io', port: '1883', status: 'online' },
-      { id: 'SGP-002', name: 'Lab. Química', location: '1º Andar — Bloco B', broker: 'broker.emqx.io', port: '1883', status: 'online' },
-      { id: 'SGP-003', name: 'Corredor Norte', location: 'Térreo — Bloco C', broker: 'broker.emqx.io', port: '1883', status: 'online' },
-    ];
+    let todosUsers = [];
+    let deviceAtual = null;
 
-    let delIdx = -1;
+    // ── Carrega dispositivos ──────────────────────────────────
+    async function carregarDevices() {
+      const res = await fetch('../api/devices.php', { credentials: 'same-origin' });
+      const devices = await res.json();
+      const tbody = document.getElementById('devicesTable');
 
-    function renderTable() {
-      document.getElementById('deviceTable').innerHTML = devices.map((d, i) => `
-        <tr>
-          <td><span style="font-family:var(--font-display);color:var(--accent);">${d.id}</span></td>
-          <td>${d.name}</td>
-          <td>${d.location}</td>
-          <td><code style="background:var(--bg-panel);padding:2px 8px;border-radius:5px;font-size:12px;">skyguard/${d.id}/data</code></td>
-          <td><span class="status-badge ${d.status}"><span class="status-dot"></span>${d.status === 'online' ? 'Online' : 'Offline'}</span></td>
-          <td>
-            <div style="display:flex;gap:6px;">
-              <a href="device-detail.html?id=${d.id}" class="btn btn-secondary btn-sm">👁 Ver</a>
-              <button class="btn btn-secondary btn-sm" onclick="editDevice(${i})">✏️</button>
-              <button class="btn btn-danger btn-sm" onclick="delDevice(${i})">🗑</button>
-            </div>
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    function saveDevice() {
-      const idx = parseInt(document.getElementById('editDevIdx').value);
-      const dev = {
-        id: document.getElementById('d-id').value.trim(),
-        name: document.getElementById('d-name').value.trim(),
-        location: document.getElementById('d-location').value.trim(),
-        broker: document.getElementById('d-broker').value.trim(),
-        port: document.getElementById('d-port').value.trim(),
-        status: document.getElementById('d-status').value,
-      };
-      if (!dev.id || !dev.name) { showToast('Preencha ID e nome.', 'warning'); return; }
-      if (idx === -1) { devices.push(dev); showToast('Dispositivo cadastrado!', 'success'); }
-      else { devices[idx] = dev; showToast('Dispositivo atualizado!', 'success'); }
-      closeModal('modalDevice'); renderTable();
-    }
-
-    function editDevice(i) {
-      const d = devices[i];
-      document.getElementById('devModalTitle').textContent = 'Editar Dispositivo';
-      document.getElementById('editDevIdx').value = i;
-      document.getElementById('d-id').value = d.id;
-      document.getElementById('d-name').value = d.name;
-      document.getElementById('d-location').value = d.location;
-      document.getElementById('d-broker').value = d.broker;
-      document.getElementById('d-port').value = d.port;
-      document.getElementById('d-status').value = d.status;
-      openModal('modalDevice');
-    }
-
-    function delDevice(i) {
-      if (confirm(`Remover "${devices[i].name}"?`)) {
-        devices.splice(i, 1); renderTable(); showToast('Dispositivo removido.', 'danger');
+      if (!devices.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">Nenhum dispositivo cadastrado</td></tr>';
+        return;
       }
+
+      // Carrega atribuições
+      const resA = await fetch('../api/devices.php?assignments=1', { credentials: 'same-origin' });
+      const assignments = await resA.json();
+
+      tbody.innerHTML = devices.map(d => {
+        const users = assignments.filter(a => a.device_id === d.device_id);
+        const userBadges = users.length
+          ? users.map(u => `<span style="background:var(--accent-dim);color:var(--accent);padding:2px 8px;border-radius:20px;font-size:11px;">${u.name}</span>`).join(' ')
+          : '<span style="color:var(--text-muted);font-size:12px;">Nenhum</span>';
+
+        const statusColor = d.status === 'online' ? 'var(--success)' : 'var(--text-muted)';
+
+        return `<tr>
+          <td><span style="font-family:monospace;color:var(--accent)">${d.device_id}</span></td>
+          <td>${d.name}</td>
+          <td style="color:var(--text-muted)">${d.location || '—'}</td>
+          <td><span style="color:${statusColor}">● ${d.status}</span></td>
+          <td>${userBadges}</td>
+          <td>
+            <button class="btn btn-secondary btn-sm" onclick="abrirModalAssign('${d.device_id}','${d.name}')">👥 Usuários</button>
+            <button class="btn btn-secondary btn-sm" onclick="deletarDevice('${d.device_id}')" style="color:var(--danger);margin-left:4px;">🗑</button>
+          </td>
+        </tr>`;
+      }).join('');
     }
 
-    renderTable();
-  </script>
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        // Detecta automaticamente o caminho base do site
-        const swPath = document.querySelector('link[rel="manifest"]').href
-          .replace('manifest.json', 'sw.js');
-        navigator.serviceWorker.register(swPath, { scope: './' })
-          .then(reg => {
-            reg.addEventListener("updatefound", () => {
-              const newSW = reg.installing;
-              newSW.addEventListener("statechange", () => {
-                if (newSW.state === "installed" && navigator.serviceWorker.controller) {
-                  newSW.postMessage({ action: "skipWaiting" });
-                }
-              });
-            });
-          })
-          .catch(err => console.warn("[SW] Falha ao registrar:", err));
-      });
+    // ── Carrega usuários para o select ────────────────────────
+    async function carregarUsers() {
+      const res = await fetch('../api/users.php', { credentials: 'same-origin' });
+      todosUsers = await res.json();
     }
+
+    // ── Modal Novo Device ─────────────────────────────────────
+    function abrirModalNovoDevice() {
+      document.getElementById('modalDevice').style.display = 'flex';
+    }
+    function fecharModalDevice() {
+      document.getElementById('modalDevice').style.display = 'none';
+      document.getElementById('inp-devid').value = '';
+      document.getElementById('inp-devname').value = '';
+      document.getElementById('inp-devloc').value = '';
+    }
+    async function salvarDevice() {
+      const body = {
+        device_id: document.getElementById('inp-devid').value.trim(),
+        name:      document.getElementById('inp-devname').value.trim(),
+        location:  document.getElementById('inp-devloc').value.trim()
+      };
+      if (!body.device_id || !body.name) return alert('ID e Nome são obrigatórios');
+      const res = await fetch('../api/devices.php', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (data.success) { fecharModalDevice(); carregarDevices(); }
+      else alert(data.error || 'Erro ao salvar');
+    }
+
+    // ── Modal Atribuir Usuários ───────────────────────────────
+    async function abrirModalAssign(deviceId, deviceName) {
+      deviceAtual = deviceId;
+      document.getElementById('assign-devname').textContent = deviceId + ' — ' + deviceName;
+      document.getElementById('modalAssign').style.display = 'flex';
+      await carregarAssignments();
+    }
+    function fecharModalAssign() {
+      document.getElementById('modalAssign').style.display = 'none';
+      deviceAtual = null;
+      carregarDevices();
+    }
+
+    async function carregarAssignments() {
+      // Usuários já atribuídos
+      const res = await fetch(`../api/devices.php?assignments=1&device_id=${deviceAtual}`, { credentials: 'same-origin' });
+      const atribuidos = await res.json();
+      const atribuidosIds = atribuidos.map(u => u.id);
+
+      // Popula select com usuários não atribuídos
+      const sel = document.getElementById('sel-user');
+      const disponiveis = todosUsers.filter(u => !atribuidosIds.includes(u.id) && u.role !== 'admin');
+      sel.innerHTML = disponiveis.length
+        ? disponiveis.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('')
+        : '<option value="">Todos os usuários já têm acesso</option>';
+
+      // Lista atribuídos
+      const list = document.getElementById('assigned-list');
+      list.innerHTML = atribuidos.length
+        ? atribuidos.map(u => `
+          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg-dark);padding:10px 14px;border-radius:8px;">
+            <div>
+              <div style="font-size:14px;color:var(--text-primary)">${u.name}</div>
+              <div style="font-size:12px;color:var(--text-muted)">${u.email}</div>
+            </div>
+            <button class="btn btn-secondary btn-sm" style="color:var(--danger)" onclick="removerUsuario(${u.id})">Remover</button>
+          </div>`).join('')
+        : '<div style="color:var(--text-muted);font-size:13px;">Nenhum usuário com acesso ainda.</div>';
+    }
+
+    async function atribuirUsuario() {
+      const userId = document.getElementById('sel-user').value;
+      if (!userId) return;
+      await fetch('../api/devices.php?assign=1', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_id: deviceAtual, user_id: parseInt(userId) })
+      });
+      await carregarAssignments();
+    }
+
+    async function removerUsuario(userId) {
+      await fetch('../api/devices.php?assign=1', {
+        method: 'DELETE', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_id: deviceAtual, user_id: userId })
+      });
+      await carregarAssignments();
+    }
+
+    async function deletarDevice(deviceId) {
+      if (!confirm(`Remover dispositivo ${deviceId}?`)) return;
+      await fetch(`../api/devices.php?id=${deviceId}`, {
+        method: 'DELETE', credentials: 'same-origin'
+      });
+      carregarDevices();
+    }
+
+    // ── Init ─────────────────────────────────────────────────
+    carregarUsers();
+    carregarDevices();
   </script>
 </body>
 </html>
